@@ -19,7 +19,7 @@ const UserLogin = () => {
       const res = await userLogin(data.identifier, data.password);
       if (res.success) {
         login(res.data, res.data.accessToken);
-        navigate('/dashboard');
+        navigate('/student');
       }
     } catch (err) {
       setErrorMsg(err.response?.data?.message || 'Login failed. Please try again.');

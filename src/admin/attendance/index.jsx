@@ -5,7 +5,6 @@ import { FiRefreshCw, FiClock, FiCheckCircle, FiXCircle, FiUsers, FiGrid } from 
 const AdminAttendancePage = () => {
   const [qr, setQr] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [countdown, setCountdown] = useState(0);
   const [todayStats, setTodayStats] = useState({ checkedIn: 0, checkedOut: 0 });
 
   const fetchQR = useCallback(async () => {
@@ -13,7 +12,6 @@ const AdminAttendancePage = () => {
     try {
       const data = await generateQR();
       setQr(data);
-      setCountdown(300);
     } catch (e) {
       console.error(e);
     } finally {
@@ -22,19 +20,6 @@ const AdminAttendancePage = () => {
   }, []);
 
   useEffect(() => { fetchQR(); }, [fetchQR]);
-
-  useEffect(() => {
-    if (countdown <= 0) return;
-    const timer = setInterval(() => setCountdown(c => c - 1), 1000);
-    return () => clearInterval(timer);
-  }, [countdown]);
-
-  useEffect(() => {
-    if (countdown <= 0 && qr) fetchQR();
-  }, [countdown, qr, fetchQR]);
-
-  const mins = Math.floor(countdown / 60);
-  const secs = countdown % 60;
 
   return (
     <div className="space-y-6">
@@ -52,19 +37,8 @@ const AdminAttendancePage = () => {
 
           {qr ? (
             <div className="relative">
-              <div className="rounded-2xl bg-white p-4 shadow-lg">
+              <div className="rounded-2xl bg-white p-4 shadow-lg border border-slate-100 dark:border-slate-700">
                 <img src={qr.qrDataUrl} alt="Attendance QR" className="h-[300px] w-[300px]" />
-              </div>
-              <div className="mt-3 text-center">
-                <p className={`text-sm font-semibold ${countdown <= 60 ? 'text-red-500 animate-pulse' : 'text-slate-500'}`}>
-                  Expires in {mins}:{secs.toString().padStart(2, '0')}
-                </p>
-                <div className="mx-auto mt-2 h-1.5 w-48 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-                  <div
-                    className={`h-full rounded-full transition-all duration-1000 ${countdown <= 60 ? 'bg-red-500' : 'bg-orange-500'}`}
-                    style={{ width: `${(countdown / 300) * 100}%` }}
-                  />
-                </div>
               </div>
             </div>
           ) : (
@@ -76,14 +50,14 @@ const AdminAttendancePage = () => {
           <button
             onClick={fetchQR}
             disabled={loading}
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--button)] px-6 py-2.5 font-semibold text-white disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--button)] px-6 py-2.5 font-semibold text-white shadow-md hover:opacity-90 disabled:opacity-60 transition-all"
           >
             <FiRefreshCw className={loading ? 'animate-spin' : ''} />
             Regenerate QR
           </button>
 
           <p className="max-w-sm text-center text-xs text-slate-400">
-            Users scan this QR from their Attendance page. The QR auto-refreshes every 5 minutes for security.
+            Users scan this QR from their Attendance page. Super Admin can click Regenerate QR anytime to create a new QR code.
           </p>
         </div>
       </section>

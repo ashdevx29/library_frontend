@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { getPayments, getPaymentStats, getPendingDues, createPayment, markPaid, markFailed, downloadReceipt, downloadInvoice, getMembers, getPendingRenewals, getAllRenewals, approveRenewal, rejectRenewal } from '../../services/paymentService';
-import { FiDollarSign, FiCalendar, FiCheckCircle, FiXCircle, FiClock, FiUser, FiFilter, FiCheck, FiX, FiPlus, FiDownload, FiFileText } from 'react-icons/fi';
+import { getPayments, getPaymentStats, getPendingDues, createPayment, markPaid, markFailed, downloadReceipt, downloadInvoice, getMembers, getPendingRenewals, getAllRenewals, approveRenewal, rejectRenewal, getExpiredMembers, getPlanStats } from '../../services/paymentService';
+import { FiDollarSign, FiCalendar, FiCheckCircle, FiXCircle, FiClock, FiUser, FiFilter, FiCheck, FiX, FiPlus, FiDownload, FiFileText, FiAlertTriangle, FiRefreshCw } from 'react-icons/fi';
 
-const TABS = ['Dashboard', 'Payments', 'Add Payment', 'Pending Dues', 'Renewals'];
+const TABS = ['Dashboard', 'Payments', 'Add Payment', 'Pending Dues', 'Renewals', 'Expired Members'];
 
 const AdminFeesPage = () => {
   const [tab, setTab] = useState('Dashboard');
   const [stats, setStats] = useState(null);
+  const [planStats, setPlanStats] = useState(null);
   const [payments, setPayments] = useState([]);
   const [dues, setDues] = useState([]);
   const [renewals, setRenewals] = useState([]);
+  const [expiredMembers, setExpiredMembers] = useState([]);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [renewalFilter, setRenewalFilter] = useState('Pending');
+  const [expiredFilter, setExpiredFilter] = useState('all');
   const [rejectModal, setRejectModal] = useState(null);
   const [rejectNote, setRejectNote] = useState('');
   const [addForm, setAddForm] = useState({ memberId: '', amount: '', paymentMethod: 'Cash', paymentDate: new Date().toISOString().split('T')[0], transactionId: '', status: 'Paid' });
@@ -27,13 +30,14 @@ const AdminFeesPage = () => {
     if (tab === 'Pending Dues') loadDues();
     if (tab === 'Renewals') loadRenewals();
     if (tab === 'Payments') loadPayments();
-  }, [tab, renewalFilter, filterStatus, filterMethod]);
+    if (tab === 'Expired Members') loadExpired();
+  }, [tab, renewalFilter, expiredFilter, filterStatus, filterMethod]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [s, p, m] = await Promise.all([getPaymentStats(), getPayments(), getMembers()]);
-      setStats(s); setPayments(p); setMembers(m);
+      const [s, p, m, ps] = await Promise.all([getPaymentStats(), getPayments(), getMembers(), getPlanStats()]);
+      setStats(s); setPayments(p); setMembers(m); setPlanStats(ps);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
@@ -49,6 +53,7 @@ const AdminFeesPage = () => {
 
   const loadDues = async () => { try { setDues(await getPendingDues()); } catch (e) { console.error(e); } };
   const loadRenewals = async () => { try { setRenewals(await getAllRenewals(renewalFilter !== 'All' ? renewalFilter : undefined)); } catch (e) { console.error(e); } };
+  const loadExpired = async () => { try { setExpiredMembers(await getExpiredMembers(expiredFilter !== 'all' ? expiredFilter : undefined)); } catch (e) { console.error(e); } };
 
   const handleAddPayment = async (e) => {
     e.preventDefault();
@@ -88,11 +93,11 @@ const AdminFeesPage = () => {
 
   return (
     <div className="space-y-6">
-      <div><h1 className="text-2xl font-bold text-slate-800 dark:text-white">Payment Management</h1><p className="text-sm text-slate-500 dark:text-slate-400">Manage payments, dues, and renewals</p></div>
+      <div><h1 className="text-2xl font-bold text-slate-800 dark:text-white">Payment Management</h1><p className="text-sm text-slate-500 dark:text-slate-400">Manage payments, dues, renewals, and expiring memberships</p></div>
 
-      <div className="flex gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
+      <div className="flex gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800 overflow-x-auto">
         {TABS.map(t => (
-          <button key={t} onClick={() => setTab(t)} className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition ${tab === t ? 'bg-white text-orange-600 shadow dark:bg-slate-700 dark:text-orange-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>{t}</button>
+          <button key={t} onClick={() => setTab(t)} className={`whitespace-nowrap rounded-lg py-2.5 px-3 text-sm font-semibold transition ${tab === t ? 'bg-white text-orange-600 shadow dark:bg-slate-700 dark:text-orange-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>{t}</button>
         ))}
       </div>
 
@@ -106,13 +111,56 @@ const AdminFeesPage = () => {
               [FiDollarSign, 'This Year', money(stats.yearRevenue), 'purple'],
               [FiClock, 'Pending Dues', stats.pendingDues, 'yellow'],
               [FiCheckCircle, 'Total Transactions', stats.totalTransactions, 'green'],
-              [FiDollarSign, 'Avg per Transaction', stats.totalTransactions > 0 ? money(Math.round(stats.totalRevenue / stats.totalTransactions)) : '₹0', 'slate'],
+              [FiAlertTriangle, 'Pending Renewals', planStats?.pendingRenewals ?? stats.pendingRenewals, 'orange'],
             ].map(([Icon, label, value, color]) => (
               <div key={label} className={`rounded-2xl bg-${color}-50 p-5 dark:bg-${color}-900/20`}>
                 <Icon className={`mb-2 text-${color}-500`} /><p className="text-xs text-slate-500">{label}</p><p className={`text-2xl font-bold text-${color}-600`}>{value}</p>
               </div>
             ))}
           </div>
+
+          {/* Plan-wise Stats */}
+          {planStats && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-slate-800">
+                <h3 className="mb-3 font-semibold text-slate-800 dark:text-white">Plan-wise Revenue</h3>
+                <div className="space-y-3">
+                  {planStats.revenueBreakdown.map(p => (
+                    <div key={p.plan} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 dark:bg-slate-700/50">
+                      <div>
+                        <p className="font-medium text-slate-800 dark:text-white">{p.label}</p>
+                        <p className="text-xs text-slate-400">{p.renewalCount} renewals</p>
+                      </div>
+                      <p className="text-lg font-bold text-slate-800 dark:text-white">{money(p.totalRevenue)}</p>
+                    </div>
+                  ))}
+                  {!planStats.revenueBreakdown.some(p => p.totalRevenue > 0) && <p className="py-4 text-center text-sm text-slate-400">No revenue data yet</p>}
+                </div>
+              </div>
+              <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-slate-800">
+                <h3 className="mb-3 font-semibold text-slate-800 dark:text-white">Active Members by Plan</h3>
+                <div className="space-y-3">
+                  {planStats.memberBreakdown.map(p => (
+                    <div key={p.plan} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 dark:bg-slate-700/50">
+                      <p className="font-medium text-slate-800 dark:text-white">{p.label}</p>
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-24 rounded-full bg-slate-200 dark:bg-slate-600">
+                          <div className="h-full rounded-full bg-orange-500" style={{ width: `${Math.min(100, (p.count / Math.max(...planStats.memberBreakdown.map(x => x.count), 1)) * 100)}%` }} />
+                        </div>
+                        <span className="text-sm font-bold text-slate-800 dark:text-white">{p.count}</span>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-500">
+                    <span>Expiring this week: <b className="text-orange-600">{planStats.expiringThisWeek}</b></span>
+                    <span>Already expired: <b className="text-red-600">{planStats.expiredMembers}</b></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Recent Payments */}
           <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-slate-800">
             <h3 className="mb-3 font-semibold text-slate-800 dark:text-white">Recent Payments</h3>
             {!stats.recentPayments.length ? <p className="py-8 text-center text-slate-400">No payments yet</p> : (
@@ -274,10 +322,56 @@ const AdminFeesPage = () => {
         </div>
       )}
 
+      {/* Expired Members */}
+      {tab === 'Expired Members' && (
+        <div className="space-y-4">
+          <div className="flex gap-2">{['all', 'expired', 'expiring'].map(s => (
+            <button key={s} onClick={() => setExpiredFilter(s)} className={`rounded-xl px-4 py-2 text-sm font-semibold capitalize transition ${expiredFilter === s ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'}`}>{s === 'all' ? 'All Due' : s}</button>
+          ))}</div>
+          {!expiredMembers.length ? (
+            <div className="rounded-2xl bg-white p-8 text-center shadow-sm dark:bg-slate-800">
+              <FiCheckCircle className="mx-auto mb-3 text-4xl text-green-400" /><p className="text-slate-400">No members found</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {expiredMembers.map(m => {
+                const exp = new Date(m.membershipExpiryDate) < new Date();
+                return (
+                  <div key={m._id} className={`rounded-2xl border p-5 shadow-sm ${exp ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/20' : 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950/20'}`}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`h-10 w-10 rounded-full flex items-center justify-center ${exp ? 'bg-red-100 dark:bg-red-900/30' : 'bg-yellow-100 dark:bg-yellow-900/30'}`}>
+                          <FiAlertTriangle className={exp ? 'text-red-500' : 'text-yellow-500'} />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-slate-800 dark:text-white">{m.fullName}</p>
+                          <p className="text-xs text-slate-400">{m.userId?.email || m.userId?.mobile || '—'} · {m.mobile}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${exp ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'}`}>
+                          {exp ? 'Expired' : 'Expiring Soon'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-4 text-sm">
+                      <span className="text-slate-500">Plan: <b className="text-slate-800 dark:text-white">{m.membershipPlan}</b></span>
+                      <span className="text-slate-500">Expired: <b className={exp ? 'text-red-600' : 'text-yellow-600'}>{fmt(m.membershipExpiryDate)}</b></span>
+                      <span className="text-slate-500">Seat: <b className="text-slate-800 dark:text-white">{m.seatId?.seatNumber || '—'}</b></span>
+                      <span className="text-slate-500">Shift: <b className="text-slate-800 dark:text-white">{m.shiftId?.shiftName || '—'}</b></span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {rejectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setRejectModal(null)}>
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-800" onClick={e => e.stopPropagation()}>
-            <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-white">Reject Renewal</h2>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setRejectModal(null)}>
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-slate-100" onClick={e => e.stopPropagation()}>
+            <h2 className="mb-4 text-lg font-bold text-slate-900 dark:text-white">Reject Renewal</h2>
             <textarea value={rejectNote} onChange={e => setRejectNote(e.target.value)} placeholder="Reason (optional)" rows={3} className={field} />
             <div className="mt-4 flex gap-3">
               <button onClick={handleReject} className="rounded-xl bg-red-500 px-5 py-2.5 font-semibold text-white hover:bg-red-600">Reject</button>

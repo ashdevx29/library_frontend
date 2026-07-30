@@ -1,4 +1,4 @@
-import api from './api';
+import api from '../utils/api';
 
 export const fetchTheme = async () => {
   const { data } = await api.get('/themes');
@@ -14,8 +14,6 @@ export const uploadThemeAsset = async (file, type = 'logo') => {
   const form = new FormData();
   form.append('file', file);
   form.append('type', type);
-  const { data } = await api.post('/themes/upload', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  const { data } = await api.post('/themes/upload', form);
   return data.data;
 };

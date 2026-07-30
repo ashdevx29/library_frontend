@@ -39,10 +39,10 @@ const AssignModal = ({ seatId, onClose, onDone }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-800" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="w-full max-w-lg rounded-2xl bg-white border border-slate-200 text-slate-900 p-6 shadow-2xl dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-800 dark:text-white">Assign Member to Seat</h2>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Assign Member to Seat</h2>
           <button onClick={onClose} className="rounded-lg p-1 hover:bg-slate-100 dark:hover:bg-slate-700"><FiX /></button>
         </div>
 

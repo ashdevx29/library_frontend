@@ -6,7 +6,7 @@ const API_BASE = import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://
 const defaultTheme = {
   libraryName: 'Saahityik Library ERP',
   logo: '/logo.png',
-  favicon: '/favicon.ico',
+  favicon: '/favicon.png',
   primaryColor: '#FF6B00',
   secondaryColor: '#FFA000',
   accentColor: '#FFB800',

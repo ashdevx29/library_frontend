@@ -38,7 +38,7 @@ const ShiftsList = () => {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Shift Management</h1>
-          <p className="text-sm text-slate-500">Morning, Afternoon, Evening, Night defaults + custom shifts</p>
+          <p className="text-sm text-slate-500">Morning, Afternoon, Evening, Full Day defaults + custom shifts</p>
         </div>
         <Link
           to="/admin/shifts/add"

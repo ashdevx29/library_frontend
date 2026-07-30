@@ -247,12 +247,12 @@ export default function AdminNotifications() {
 
       {/* VIEW MODAL */}
       {viewNotif && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setViewNotif(null)}>
-          <div className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setViewNotif(null)}>
+          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white text-slate-900 p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100" onClick={e => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {(() => { const Icon = TYPE_ICONS[viewNotif.type]; return <Icon size={18} className={TYPE_COLORS[viewNotif.type]?.text || ''} />; })()}
-                <h2 className="text-lg font-bold text-[var(--text-primary)]">{viewNotif.title}</h2>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">{viewNotif.title}</h2>
               </div>
               <button onClick={() => setViewNotif(null)} className="rounded-lg border border-[var(--border)] p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)]"><FiX size={14} /></button>
             </div>

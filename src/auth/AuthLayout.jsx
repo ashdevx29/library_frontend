@@ -18,13 +18,11 @@ const AuthLayout = ({ children, title, subtitle }) => {
 
       <div className="glassmorphism relative z-10 w-full max-w-md rounded-2xl p-8 shadow-xl">
         <div className="mb-8 text-center">
-          {theme.logo && (
-            <img
-              src={logoUrl(theme.logo)}
-              alt={theme.libraryName}
-              className="mx-auto mb-4 h-14 w-14 rounded-xl object-contain"
-            />
-          )}
+          <img
+            src="/logo.png"
+            alt={theme.libraryName || 'Saahityik Library ERP'}
+            className="mx-auto mb-4 h-14 w-14 rounded-xl object-contain"
+          />
           <h1 className="font-poppins text-3xl font-bold tracking-tight text-gray-800">{title}</h1>
           {subtitle && <p className="mt-2 font-inter text-sm text-gray-500">{subtitle}</p>}
           {theme.libraryName && (

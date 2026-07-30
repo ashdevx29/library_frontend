@@ -34,6 +34,7 @@ import BackupPage from './admin/backup';
 import ImportExportPage from './admin/importexport';
 import RolesPage from './admin/roles';
 import SettingsPage from './admin/settings';
+import AnalyticsDashboard from './admin/analytics/index.jsx';
 import AdminProfilePage from './admin/profile';
 
 import UserDashboard from './user/dashboard';
@@ -83,6 +84,7 @@ function App() {
             <Route path="shifts/edit/:id" element={<ShiftForm />} />
             <Route path="seats" element={<SeatsPage />} />
             <Route path="seats/add" element={<SeatForm />} />
+            
             <Route path="seats/edit/:id" element={<SeatForm />} />
             <Route path="seats/view/:id" element={<ViewSeat />} />
             <Route path="attendance" element={<AttendancePage />} />
@@ -96,10 +98,11 @@ function App() {
             <Route path="import-export" element={<ImportExportPage />} />
             <Route path="roles" element={<RolesPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="analytics" element={<AnalyticsDashboard />} />
             <Route path="profile" element={<AdminProfilePage />} />
           </Route>
 
-          <Route path="/dashboard" element={
+          <Route path="/student" element={
             <ProtectedRoute allowedRoles={['Student']}>
               <UserLayout />
             </ProtectedRoute>

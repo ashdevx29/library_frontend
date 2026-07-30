@@ -98,3 +98,13 @@ export const rejectRenewal = async (id, note) => {
   const { data } = await api.post(`/membership/renewals/${id}/reject`, { note });
   return data.data;
 };
+
+export const getExpiredMembers = async (filter) => {
+  const { data } = await api.get('/membership/expired', { params: { filter } });
+  return data.data;
+};
+
+export const getPlanStats = async () => {
+  const { data } = await api.get('/membership/plan-stats');
+  return data.data;
+};

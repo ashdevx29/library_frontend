@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { getMyMembership, requestRenewal, getMyPayments, getMyRenewals, downloadReceipt } from '../../services/paymentService';
-import { FiCalendar, FiClock, FiCheckCircle, FiAlertTriangle, FiDollarSign, FiGrid, FiCreditCard, FiDownload, FiFileText, FiRefreshCw } from 'react-icons/fi';
+import { FiCalendar, FiClock, FiCheckCircle, FiAlertTriangle, FiDollarSign, FiGrid, FiCreditCard, FiDownload, FiFileText, FiRefreshCw, FiInfo } from 'react-icons/fi';
+
+const PLAN_PRICES = { Monthly: 500, Quarterly: 1200, HalfYearly: 2000, Yearly: 3500 };
 
 const UserFeesPage = () => {
   const [data, setData] = useState(null);
@@ -16,10 +18,19 @@ const UserFeesPage = () => {
 
   useEffect(() => {
     Promise.all([getMyMembership(), getMyPayments(), getMyRenewals()])
-      .then(([m, p, r]) => { setData(m); setPayments(p); setRenewals(r); })
+      .then(([m, p, r]) => {
+        setData(m); setPayments(p); setRenewals(r);
+        if (m?.isExpired) setTab('renew');
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (selectedPlan) {
+      setAmount(String(PLAN_PRICES[selectedPlan] || ''));
+    }
+  }, [selectedPlan]);
 
   const handleRenew = async () => {
     if (!selectedPlan) return;
@@ -53,7 +64,36 @@ const UserFeesPage = () => {
 
   return (
     <div className="space-y-6">
-      <div><h1 className="text-2xl font-bold text-slate-800 dark:text-white">My Fees & Payments</h1><p className="text-sm text-slate-500 dark:text-slate-400">View your payments, renewals, and membership</p></div>
+      <div>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-white">My Fees & Payments</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">View your membership, submit fees, and track renewals</p>
+      </div>
+
+      {/* Expired Alert Banner */}
+      {isExpired && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-5 dark:border-red-800 dark:bg-red-950/20">
+          <div className="flex items-center gap-3">
+            <FiAlertTriangle className="text-3xl text-red-500" />
+            <div>
+              <p className="text-lg font-bold text-red-600">Membership Expired</p>
+              <p className="text-sm text-red-500">Your membership expired on {fmt(member.membershipExpiryDate)}. Please renew to continue using library services.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Expiring Soon Alert */}
+      {!isExpired && daysLeft <= 7 && (
+        <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-5 dark:border-yellow-800 dark:bg-yellow-950/20">
+          <div className="flex items-center gap-3">
+            <FiClock className="text-3xl text-yellow-500" />
+            <div>
+              <p className="text-lg font-bold text-yellow-600">Membership Expiring Soon</p>
+              <p className="text-sm text-yellow-500">{daysLeft} days remaining. Renew now to avoid interruption.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
         {['membership', 'payments', 'renewals', 'renew'].map(t => (
@@ -86,6 +126,11 @@ const UserFeesPage = () => {
             </div>
           </section>
           {pendingRequest && <div className="rounded-2xl bg-yellow-50 p-5 dark:bg-yellow-900/20"><div className="flex items-center gap-2"><FiClock className="text-yellow-600" /><p className="font-semibold text-yellow-700 dark:text-yellow-400">Renewal Pending</p></div><p className="mt-1 text-sm text-yellow-600">Your {pendingRequest.planType} renewal is awaiting admin approval.</p></div>}
+          {isExpired && (
+            <button onClick={() => setTab('renew')} className="w-full rounded-2xl bg-orange-500 py-4 text-lg font-bold text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600 transition">
+              Renew Membership Now
+            </button>
+          )}
         </div>
       )}
 
@@ -139,24 +184,61 @@ const UserFeesPage = () => {
           {pendingRequest ? (
             <div className="rounded-2xl bg-yellow-50 p-8 text-center dark:bg-yellow-900/20"><FiClock className="mx-auto mb-3 text-4xl text-yellow-500" /><p className="font-semibold text-yellow-700 dark:text-yellow-400">Renewal Request Pending</p><p className="mt-1 text-sm text-yellow-600">Your {pendingRequest.planType} renewal is being reviewed.</p></div>
           ) : (
-            <section className="rounded-2xl border border-white/70 bg-white/80 p-6 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-800/80">
-              <h2 className="mb-4 text-lg font-semibold text-slate-800 dark:text-white">Select Renewal Plan</h2>
-              <p className="mb-4 text-sm text-slate-500">Choose a plan. Admin approval is required.</p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {plans.map(p => (
-                  <button key={p.type} onClick={() => setSelectedPlan(p.type)} className={`rounded-xl border-2 p-5 text-left transition ${selectedPlan === p.type ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20' : 'border-slate-200 hover:border-orange-300 dark:border-slate-700'}`}>
-                    <p className="text-lg font-bold text-slate-800 dark:text-white">{p.label}</p><p className="text-sm text-slate-500">{p.days} days</p>
-                  </button>
-                ))}
-              </div>
-              {selectedPlan && (
-                <div className="mt-6 space-y-4 rounded-xl bg-slate-50 p-5 dark:bg-slate-700/50">
-                  <div><label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Amount (₹)</label><div className="relative"><FiDollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" /><input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Enter amount" className={field + ' pl-10'} /></div></div>
-                  <div><label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Payment Method</label><div className="relative"><FiCreditCard className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" /><select value={method} onChange={e => setMethod(e.target.value)} className={field + ' pl-10'}>{['Cash', 'UPI', 'Bank Transfer'].map(m => <option key={m}>{m}</option>)}</select></div></div>
-                  <button onClick={handleRenew} disabled={submitting} className="w-full rounded-xl bg-[var(--button)] py-3 font-semibold text-white disabled:opacity-60">{submitting ? 'Submitting...' : 'Submit Renewal Request'}</button>
+            <>
+              {/* Plan Selection */}
+              <section className="rounded-2xl border border-white/70 bg-white/80 p-6 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-800/80">
+                <h2 className="mb-4 text-lg font-semibold text-slate-800 dark:text-white">Choose a Plan & Submit Fees</h2>
+                <p className="mb-4 text-sm text-slate-500">Select a plan to renew your membership. Admin approval is required.</p>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {plans.map(p => {
+                    const price = PLAN_PRICES[p.type] || 0;
+                    const isPopular = p.type === 'Quarterly';
+                    return (
+                      <button key={p.type} onClick={() => setSelectedPlan(p.type)}
+                        className={`relative rounded-xl border-2 p-5 text-left transition-all ${selectedPlan === p.type ? 'border-orange-500 bg-orange-50 shadow-lg shadow-orange-200 dark:bg-orange-900/20 dark:shadow-orange-900/30' : 'border-slate-200 hover:border-orange-300 hover:shadow-md dark:border-slate-700'}`}>
+                        {isPopular && <span className="absolute -top-2.5 right-3 rounded-full bg-orange-500 px-3 py-0.5 text-[10px] font-bold text-white">Popular</span>}
+                        <p className="text-lg font-bold text-slate-800 dark:text-white">{p.label}</p>
+                        <p className="mt-1 text-2xl font-extrabold text-orange-600">₹{price.toLocaleString('en-IN')}</p>
+                        <p className="mt-1 text-xs text-slate-400">{p.days} days · ₹{Math.round(price / p.days)}/day</p>
+                      </button>
+                    );
+                  })}
                 </div>
+              </section>
+
+              {/* Payment Form */}
+              {selectedPlan && (
+                <section className="rounded-2xl bg-white p-6 shadow-sm dark:bg-slate-800">
+                  <h2 className="mb-4 text-lg font-semibold text-slate-800 dark:text-white">Payment Details</h2>
+                  <div className="rounded-xl bg-orange-50 p-4 mb-5 dark:bg-orange-900/20">
+                    <div className="flex items-center gap-2 text-sm">
+                      <FiInfo className="text-orange-500" />
+                      <span className="text-orange-700 dark:text-orange-300">Amount auto-filled based on selected plan. You can adjust if needed.</span>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Amount (₹)</label>
+                      <div className="relative"><FiDollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Enter amount" className={field + ' pl-10'} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Payment Method</label>
+                      <div className="relative"><FiCreditCard className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <select value={method} onChange={e => setMethod(e.target.value)} className={field + ' pl-10'}>
+                          {['Cash', 'UPI', 'Bank Transfer'].map(m => <option key={m}>{m}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <button onClick={handleRenew} disabled={submitting}
+                      className="w-full rounded-xl bg-orange-500 py-3.5 font-bold text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600 transition disabled:opacity-60 flex items-center justify-center gap-2">
+                      {submitting ? 'Submitting...' : <><FiRefreshCw /> Submit Renewal & Pay ₹{Number(amount || 0).toLocaleString('en-IN')}</>}
+                    </button>
+                  </div>
+                </section>
               )}
-            </section>
+            </>
           )}
           {result && <div className={`rounded-xl px-4 py-3 text-sm ${result.success ? 'bg-green-50 text-green-600 dark:bg-green-900/20' : 'bg-red-50 text-red-600 dark:bg-red-900/20'}`}>{result.message}</div>}
         </div>

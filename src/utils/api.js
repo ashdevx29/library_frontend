@@ -1,9 +1,11 @@
 import axios from 'axios';
+import useAuthStore from '../store/authStore';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
   headers: { 'Content-Type': 'application/json' },
   timeout: 30000,
+  withCredentials: true,
 });
 
 api.interceptors.request.use((config) => {
@@ -12,14 +14,53 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) prom.reject(error);
+    else prom.resolve(token);
+  });
+  failedQueue = [];
+};
+
 api.interceptors.response.use(
   (res) => res,
-  (err) => {
-    if (err.response?.status === 401) {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('userInfo');
-      window.location.href = '/login';
+  async (err) => {
+    const originalRequest = err.config;
+
+    if (err.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const store = useAuthStore.getState();
+        const newToken = await store.refreshToken();
+        if (newToken) {
+          processQueue(null, newToken);
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return api(originalRequest);
+        }
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        useAuthStore.getState().logout();
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
     }
+
     return Promise.reject(err);
   }
 );

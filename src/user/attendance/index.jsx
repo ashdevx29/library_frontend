@@ -24,13 +24,41 @@ const UserAttendancePage = () => {
       .finally(() => setLoading(false));
   }, [currentMonth]);
 
+  const [manualToken, setManualToken] = useState('');
+
+  const processScanResult = async (decodedText, scanAction) => {
+    const tokenMatch = decodedText.match(/qr=([^&]+)/);
+    const token = tokenMatch ? tokenMatch[1] : decodedText;
+    if (!token) {
+      setResult({ success: false, message: 'Invalid QR code: no token found' });
+      return;
+    }
+    try {
+      const data = scanAction === 'clockIn'
+        ? await clockInQR(token)
+        : await clockOutQR(token);
+      setResult({ success: true, message: data.message, attendance: data.attendance });
+      const s = await getAttendanceStatus();
+      setStatus(s);
+    } catch (e) {
+      setResult({ success: false, message: e.response?.data?.message || e.message });
+    }
+  };
+
   const startScanner = (scanAction) => {
     setAction(scanAction);
     setResult(null);
     setError('');
+    setManualToken('');
     setScanning(true);
 
     setTimeout(() => {
+      const el = document.getElementById('qr-reader');
+      if (!el) {
+        setScanning(false);
+        setError('QR reader element not found');
+        return;
+      }
       const scanner = new Html5Qrcode('qr-reader');
       scannerRef.current = scanner;
 
@@ -40,42 +68,43 @@ const UserAttendancePage = () => {
         async (decodedText) => {
           scanner.stop().catch(() => {});
           setScanning(false);
-
-          const tokenMatch = decodedText.match(/qr=([^&]+)/);
-          const token = tokenMatch ? tokenMatch[1] : decodedText;
-
-          try {
-            const data = scanAction === 'clockIn'
-              ? await clockInQR(token)
-              : await clockOutQR(token);
-            setResult({ success: true, message: data.message, attendance: data.attendance });
-            const s = await getAttendanceStatus();
-            setStatus(s);
-          } catch (e) {
-            setResult({ success: false, message: e.response?.data?.message || e.message });
-          }
+          await processScanResult(decodedText, scanAction);
         },
         () => {}
       ).catch(() => {
         setScanning(false);
-        setError('Camera access denied. Please allow camera permissions.');
+        setError('Camera access denied. Please allow camera permissions or use manual entry below.');
       });
     }, 500);
   };
 
-  const stopScanner = () => {
-    if (scannerRef.current) {
-      scannerRef.current.stop().catch(() => {});
-      scannerRef.current.clear().catch(() => {});
-      scannerRef.current = null;
-    }
-    setScanning(false);
-    setAction(null);
+  const handleManualSubmit = async () => {
+    if (!manualToken.trim()) return;
     setResult(null);
+    setError('');
+    await processScanResult(manualToken.trim(), action);
+  };
+
+  const stopScanner = () => {
+    const scanner = scannerRef.current;
+    scannerRef.current = null;
+
+    setAction(null);
+    setScanning(false);
+    setResult(null);
+    setManualToken('');
+
+    if (scanner) {
+      scanner.stop().then(() => scanner.clear()).catch(() => {});
+    }
   };
 
   useEffect(() => {
-    return () => { if (scannerRef.current) { scannerRef.current.stop().catch(() => {}); scannerRef.current.clear().catch(() => {}); } };
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().then(() => scannerRef.current.clear()).catch(() => {});
+      }
+    };
   }, []);
 
   const fmt = (d) => d ? new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—';
@@ -143,10 +172,10 @@ const UserAttendancePage = () => {
 
       {/* Scanner Modal */}
       {action && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={stopScanner}>
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-800" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={stopScanner}>
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-slate-100" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-slate-800 dark:text-white">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                 {action === 'clockIn' ? 'Scan to Clock In' : 'Scan to Clock Out'}
               </h3>
               <button onClick={stopScanner} className="rounded-lg p-1 hover:bg-slate-100 dark:hover:bg-slate-700">
@@ -171,6 +200,26 @@ const UserAttendancePage = () => {
                 {result.message}
               </div>
             )}
+
+            {/* Manual token entry fallback */}
+            <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-700">
+              <p className="mb-2 text-xs text-slate-400">Or enter QR token manually:</p>
+              <div className="flex gap-2">
+                <input
+                  value={manualToken}
+                  onChange={(e) => setManualToken(e.target.value)}
+                  placeholder="Paste QR token here"
+                  className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
+                />
+                <button
+                  onClick={handleManualSubmit}
+                  disabled={!manualToken.trim()}
+                  className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
+                >
+                  Submit
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

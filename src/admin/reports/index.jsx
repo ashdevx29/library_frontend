@@ -2,23 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import useThemeStore from '../../store/themeStore.js';
 import { adminReportService } from '../../services/adminReportService.js';
 import { getDailyReport, getMonthlyReport, getYearlyReport } from '../../services/expenseService.js';
+import ExportButton from '../../components/ui/ExportButton';
 import { FiUsers, FiDollarSign, FiGrid, FiDownload, FiFilter, FiBarChart2, FiClock, FiCheckCircle, FiAlertTriangle } from 'react-icons/fi';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const TABS = ['Attendance','Fees','Expenses','Membership','Seats'];
-
-const exportCSV = (data, name) => {
-  if (!data.length) return;
-  const csv = [Object.keys(data[0]).join(','), ...data.map(r => Object.values(r).map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(','))].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${name}.csv`; a.click();
-};
-
-const ExportBtns = ({ data, name }) => (
-  <button onClick={() => exportCSV(data, name)} className="flex items-center gap-1 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] px-2 py-1 text-[10px] font-semibold text-[var(--text-secondary)] hover:border-green-500 hover:text-green-600 transition-all">
-    <FiDownload size={10} /> CSV
-  </button>
-);
 
 const StatCard = ({ icon: Icon, label, value, color }) => (
   <div className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-3">
@@ -84,10 +72,23 @@ export default function AdminReports() {
   const attSubTabs = ['Daily','Monthly','Yearly'];
   const expSubTabs = ['Daily','Monthly','Yearly'];
 
+  const entityMap = { Attendance: 'attendance', Fees: 'payments', Expenses: 'expenses', Membership: 'members', Seats: 'members' };
+
+  const exportParams = useMemo(() => {
+    if (tab === 'Attendance' && subTab === 'Daily') return { startDate: date, endDate: date };
+    if (tab === 'Attendance' && subTab === 'Monthly') return { startDate: `${year}-${String(month).padStart(2,'0')}-01`, endDate: `${year}-${String(month).padStart(2,'0')}-31` };
+    if (tab === 'Attendance' && subTab === 'Yearly') return { startDate: `${year}-01-01`, endDate: `${year}-12-31` };
+    if (tab === 'Fees' && subTab === 'Daily') return { startDate: date, endDate: date };
+    if (tab === 'Fees' && subTab === 'Monthly') return { startDate: `${year}-${String(month).padStart(2,'0')}-01`, endDate: `${year}-${String(month).padStart(2,'0')}-31` };
+    if (tab === 'Expenses' && subTab === 'Daily') return { startDate: date, endDate: date };
+    if (tab === 'Expenses' && subTab === 'Monthly') return { startDate: `${year}-${String(month).padStart(2,'0')}-01`, endDate: `${year}-${String(month).padStart(2,'0')}-31` };
+    if (tab === 'Expenses' && subTab === 'Yearly') return { startDate: `${year}-01-01`, endDate: `${year}-12-31` };
+    return {};
+  }, [tab, subTab, date, month, year]);
+
   const renderTable = () => {
     if (!data) return null;
 
-    // ── ATTENDANCE ──
     if (tab === 'Attendance' && subTab === 'Daily' && data.records) {
       return <Table cols={[{ label: 'Name', key: 'fullName', render: r => r.memberId?.fullName || '-' }, { label: 'Shift', render: r => r.shiftId?.shiftName || '-' }, { label: 'Seat', render: r => r.seatId?.seatNumber || '-' }, { label: 'Check In', render: r => r.checkInTime ? new Date(r.checkInTime).toLocaleTimeString() : '-' }, { label: 'Check Out', render: r => r.checkOutTime ? new Date(r.checkOutTime).toLocaleTimeString() : '-' }, { label: 'Status', render: r => <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${r.status==='Present'?'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400':'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'}`}>{r.status}</span> }]} rows={data.records} />;
     }
@@ -112,7 +113,6 @@ export default function AdminReports() {
       );
     }
 
-    // ── FEES ──
     if (tab === 'Fees' && subTab === 'Daily' && data.paid) {
       return <Table cols={[{ label: 'Name', render: r => r.memberId?.fullName || '-' }, { label: 'Amount', render: r => `₹${r.amount}` }, { label: 'Plan', render: r => r.membershipId?.planType || '-' }, { label: 'Method', render: r => r.paymentMethod || '-' }, { label: 'Status', render: r => <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${r.status==='Paid'?'bg-green-100 text-green-700':'bg-yellow-100 text-yellow-700'}`}>{r.status}</span> }]} rows={[...data.paid, ...data.pending]} />;
     }
@@ -130,7 +130,6 @@ export default function AdminReports() {
       return <Table cols={[{ label: 'Name', render: r => r.memberId?.fullName || '-' }, { label: 'Amount', render: r => `₹${r.amount}` }, { label: 'Plan', render: r => r.membershipId?.planType || '-' }, { label: 'Date', render: r => new Date(r.paymentDate).toLocaleDateString() }]} rows={data.pendingPayments} emptyMsg="No pending payments" />;
     }
 
-    // ── EXPENSES ──
     if (tab === 'Expenses' && subTab === 'Daily' && data.expenses) {
       return (
         <>
@@ -173,7 +172,6 @@ export default function AdminReports() {
       );
     }
 
-    // ── MEMBERSHIP ──
     if (tab === 'Membership' && data.total !== undefined) {
       const sub = subTab === 'Active' ? 'Active' : subTab === 'Expiring' ? 'Expiring' : 'Expired';
       const list = sub === 'Active' ? (data.expiringDetails || []).filter(m => { const d = new Date(m.membershipExpiryDate); return d > new Date(Date.now() + 7*86400000); }) : sub === 'Expiring' ? data.expiringDetails : data.expiredDetails;
@@ -186,7 +184,6 @@ export default function AdminReports() {
       );
     }
 
-    // ── SEATS ──
     if (tab === 'Seats' && data.total !== undefined) {
       return (
         <>
@@ -242,12 +239,10 @@ export default function AdminReports() {
         </div>
       </div>
 
-      {/* Tab Navigation */}
       <div className="flex gap-1 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-1 overflow-x-auto">
         {TABS.map(t => <button key={t} onClick={() => { setTab(t); setSubTab(t==='Fees'?'Daily':t==='Membership'?'Active':t==='Seats'?'Overview':'Daily'); }} className={`flex-shrink-0 rounded-lg px-4 py-2 text-xs font-semibold transition-all ${tab===t?'bg-[var(--primary)] text-white shadow-md':'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'}`}>{t}</button>)}
       </div>
 
-      {/* Sub-tabs + Filters + Export */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex gap-1">
           {(tab==='Attendance'?attSubTabs:tab==='Fees'?feeSubTabs:tab==='Expenses'?expSubTabs:tab==='Membership'?['Active','Expiring','Expired']:[]).map(s => <button key={s} onClick={() => setSubTab(s)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${subTab===s?'bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20':'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}>{s}</button>)}
@@ -262,12 +257,11 @@ export default function AdminReports() {
               <select value={year} onChange={e => setYear(Number(e.target.value))} className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-2 py-1.5 text-xs text-[var(--text-primary)]">{[2024,2025,2026,2027].map(y => <option key={y} value={y}>{y}</option>)}</select>
             </>
           )}
-          {tab !== 'Expenses' && <ExportBtns data={currentData} name={`${tab}-${subTab}-${date || month+'-'+year}`} />}
+          <ExportButton entity={entityMap[tab]} filename={`${tab}-${subTab}-report`} params={exportParams} disabled={tab==='Seats'} />
           <button onClick={load} className="flex items-center gap-1 rounded-lg bg-[var(--primary)] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 transition-all"><FiFilter size={12} /> Refresh</button>
         </div>
       </div>
 
-      {/* Stats Bar */}
       {data && tab==='Attendance' && subTab==='Daily' && data.totalMembers !== undefined && (
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
           <StatCard icon={FiUsers} label="Total Members" value={data.totalMembers} color="bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400" />

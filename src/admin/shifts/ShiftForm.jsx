@@ -63,7 +63,7 @@ const ShiftForm = () => {
             <label className="mb-1 block text-sm font-medium">Shift Name</label>
             <select {...register('shiftName', { required: 'Required' })} className={field}>
               <option value="">Select shift</option>
-              {['Morning', 'Afternoon', 'Evening', 'Night'].map((name) => (
+              {['Morning', 'Afternoon', 'Evening', 'Full Day'].map((name) => (
                 <option key={name} value={name}>{name}</option>
               ))}
             </select>
