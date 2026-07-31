@@ -16,7 +16,8 @@ const Login = () => {
     setErrorMsg('');
     try {
       // Assuming a local server for dev; in production this would be an env var
-      const res = await axios.post('http://localhost:5000/api/auth/login', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const res = await axios.post(`${apiUrl}/auth/login`, {
         email: data.identifier,
         password: data.password
       });

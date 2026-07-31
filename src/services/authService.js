@@ -1,11 +1,12 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/auth';
+const API_URL = import.meta.env.VITE_API_URL
+  ? import.meta.env.VITE_API_URL + '/auth'
+  : 'http://localhost:5000/api/auth';
 
-// Add interceptor to pass tokens if needed, but here we keep it simple
 const axiosInstance = axios.create({
   baseURL: API_URL,
-  withCredentials: true // send cookies
+  withCredentials: true
 });
 
 export const adminLogin = async (identifier, password) => {
