@@ -10,8 +10,8 @@ dist
 dist-verify
 dist-ssr
 *.local
-.env
-.env.production
+# .env
+# .env.production
 
 # Editor directories and files
 .vscode/*
