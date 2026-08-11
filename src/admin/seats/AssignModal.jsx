@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiX, FiSearch } from 'react-icons/fi';
 import { assignSeat, getMembers, getShifts } from '../../services/seatService';
+import { getPhotoUrl } from '../../utils/image';
 
 const AssignModal = ({ seatId, onClose, onDone }) => {
   const [members, setMembers] = useState([]);
@@ -70,7 +71,7 @@ const AssignModal = ({ seatId, onClose, onDone }) => {
                 onClick={() => setSelectedMember(m._id)}
                 className={`flex w-full items-center gap-3 rounded-xl p-2 text-left text-sm transition ${selectedMember === m._id ? 'bg-orange-100 ring-2 ring-orange-400 dark:bg-orange-900/30' : 'hover:bg-slate-50 dark:hover:bg-slate-700'}`}
               >
-                <img className="h-8 w-8 rounded-full bg-orange-100 object-cover" src={`https://ui-avatars.com/api/?background=FFF0E6&color=FF6B00&name=${encodeURIComponent(m.fullName)}`} alt="" />
+                <img className="h-8 w-8 rounded-full bg-orange-100 object-cover" src={getPhotoUrl(m.photo, m.fullName)} alt="" />
                 <div>
                   <p className="font-medium text-slate-800 dark:text-white">{m.fullName}</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">{m.mobile}</p>

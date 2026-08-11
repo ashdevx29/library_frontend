@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
+import toast from 'react-hot-toast';
 import { FiPlus, FiGrid, FiList, FiEye, FiEdit2, FiTrash2, FiSearch, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { getSeats, deleteSeat, updateSeatStatus } from '../../services/seatService';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 
 const STATUS_BADGE = {
   Available: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
@@ -26,6 +28,7 @@ const SeatList = () => {
   const [sortKey, setSortKey] = useState('seatNumber');
   const [sortDir, setSortDir] = useState('asc');
   const [page, setPage] = useState(1);
+  const [confirmId, setConfirmId] = useState(null);
   const navigate = useNavigate();
 
   const load = async () => {
@@ -79,15 +82,17 @@ const SeatList = () => {
     else { setSortKey(key); setSortDir('asc'); }
   };
 
-  const onDelete = async (id) => {
-    if (!confirm('Delete this seat?')) return;
-    try { await deleteSeat(id); setSeats((prev) => prev.filter((s) => s._id !== id)); }
-    catch (e) { alert(e.response?.data?.message || 'Delete failed'); }
+  const onDelete = (id) => setConfirmId(id);
+
+  const doDelete = async () => {
+    try { await deleteSeat(confirmId); setSeats((prev) => prev.filter((s) => s._id !== confirmId)); toast.success('Seat deleted'); }
+    catch (e) { toast.error(e.response?.data?.message || 'Delete failed'); }
+    finally { setConfirmId(null); }
   };
 
   const onStatus = async (id, status) => {
-    try { const updated = await updateSeatStatus(id, status); setSeats((prev) => prev.map((s) => (s._id === id ? updated : s))); }
-    catch (e) { alert(e.response?.data?.message || 'Status update failed'); }
+    try { const updated = await updateSeatStatus(id, status); setSeats((prev) => prev.map((s) => (s._id === id ? updated : s))); toast.success('Status updated'); }
+    catch (e) { toast.error(e.response?.data?.message || 'Status update failed'); }
   };
 
   const SortHeader = ({ label, field }) => (
@@ -182,6 +187,15 @@ const SeatList = () => {
           <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="rounded-lg border p-2 disabled:opacity-40 dark:border-slate-700 dark:text-white"><FiChevronRight /></button>
         </div>
       )}
+      <ConfirmDialog
+        isOpen={!!confirmId}
+        onClose={() => setConfirmId(null)}
+        onConfirm={doDelete}
+        title="Delete Seat"
+        message="Are you sure you want to delete this seat? This action cannot be undone."
+        confirmText="Delete Seat"
+        variant="danger"
+      />
     </div>
   );
 };

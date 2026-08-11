@@ -19,6 +19,8 @@ const TABS = [
   { id: 'history', label: 'History', icon: FiCalendar },
 ];
 
+import { getPhotoUrl } from '../../utils/image';
+
 export default function ViewMember() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -41,7 +43,7 @@ export default function ViewMember() {
   if (!member) return null;
 
   const d = daysLeft(member.membershipExpiryDate);
-  const photo = member.photo || `https://ui-avatars.com/api/?background=FFF0E6&color=FF6B00&name=${encodeURIComponent(member.fullName)}&size=128`;
+  const photo = getPhotoUrl(member.photo, member.fullName);
   const selectedPlan = PLAN_TYPES.find(p => p.value === watch('membershipPlan'));
 
   return (

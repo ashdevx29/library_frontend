@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FiEdit2, FiArrowLeft, FiClock, FiUser, FiGrid, FiMapPin, FiCalendar, FiRepeat, FiX } from 'react-icons/fi';
 import { getSeat, getSeatHistory, getSeatUsage } from '../../services/seatService';
+import { getPhotoUrl } from '../../utils/image';
 import AssignModal from './AssignModal';
 import TransferModal from './TransferModal';
 
@@ -111,7 +112,7 @@ const ViewSeat = () => {
           {seat.currentOccupant ? (
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <img className="h-12 w-12 rounded-full bg-orange-100 object-cover" src={`https://ui-avatars.com/api/?background=FFF0E6&color=FF6B00&name=${encodeURIComponent(seat.currentOccupant.fullName)}`} alt="" />
+                <img className="h-12 w-12 rounded-full bg-orange-100 object-cover" src={getPhotoUrl(seat.currentOccupant.photo, seat.currentOccupant.fullName)} alt="" />
                 <div>
                   <p className="font-semibold text-slate-800 dark:text-white">{seat.currentOccupant.fullName}</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">{seat.currentOccupant.mobile}</p>

@@ -16,7 +16,24 @@ export default function AddMember() {
   const seats = seatsData?.seats || seatsData || [];
   const createMut = useCreateMember();
 
-  const { register, handleSubmit, formState: { errors }, watch } = useForm({ resolver: zodResolver(memberSchema), defaultValues: { membershipPlan: 'Monthly', joiningDate: new Date().toISOString().split('T')[0] } });
+  const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm({
+    resolver: zodResolver(memberSchema),
+    defaultValues: {
+      membershipPlan: 'Monthly',
+      joiningDate: new Date().toISOString().split('T')[0],
+      amount: 500,
+      paymentMethod: 'Cash',
+      paymentStatus: 'Pending',
+    }
+  });
+
+  const selectedPlan = watch('membershipPlan');
+  React.useEffect(() => {
+    const prices = { Monthly: 500, Quarterly: 1200, 'Half-Yearly': 2000, HalfYearly: 2000, Yearly: 3500 };
+    if (prices[selectedPlan]) {
+      setValue('amount', prices[selectedPlan]);
+    }
+  }, [selectedPlan, setValue]);
 
   const onSubmit = async (formData) => {
     try {
@@ -84,9 +101,9 @@ export default function AddMember() {
           </div>
         </div>
 
-        {/* Membership */}
+        {/* Membership & Fee Details */}
         <div>
-          <h3 className="mb-3 text-sm font-bold text-[var(--text-primary)]">Membership</h3>
+          <h3 className="mb-3 text-sm font-bold text-[var(--text-primary)]">Membership & Fee Details</h3>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <FormField label="Joining Date" error={errors.joiningDate?.message} required>
               <input {...register('joiningDate')} type="date" className={inputClass} />
@@ -99,6 +116,28 @@ export default function AddMember() {
                     <div className="text-center"><div>{p.label}</div><div className="text-[10px] text-[var(--text-muted)]">{p.days} days</div></div>
                   </label>
                 ))}
+              </div>
+            </FormField>
+            <FormField label="Fee Amount (₹)">
+              <input {...register('amount')} type="number" className={inputClass} placeholder="Fee amount (e.g. 500)" />
+            </FormField>
+            <FormField label="Payment Method">
+              <select {...register('paymentMethod')} className={inputClass}>
+                <option value="Cash">Cash</option>
+                <option value="UPI">UPI</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+              </select>
+            </FormField>
+            <FormField label="Payment Status" className="md:col-span-2">
+              <div className="flex gap-4">
+                <label className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-2 p-3 text-xs font-bold transition-all ${watch('paymentStatus') === 'Pending' ? 'border-yellow-500 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20' : 'border-[var(--border)] text-slate-600'}`}>
+                  <input type="radio" {...register('paymentStatus')} value="Pending" className="hidden" />
+                  ⏳ Fees Pending (Overdue / Due Later)
+                </label>
+                <label className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-2 p-3 text-xs font-bold transition-all ${watch('paymentStatus') === 'Paid' ? 'border-green-500 bg-green-50 text-green-700 dark:bg-green-900/20' : 'border-[var(--border)] text-slate-600'}`}>
+                  <input type="radio" {...register('paymentStatus')} value="Paid" className="hidden" />
+                  ✅ Fees Paid (Complete)
+                </label>
               </div>
             </FormField>
           </div>

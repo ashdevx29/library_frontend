@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { FiShield, FiPlus, FiEdit2, FiTrash2, FiX, FiCheck, FiLock } from 'react-icons/fi';
 import { getRoles, createRole, updateRole, deleteRole, getRoleStats } from '../../services/roleService.js';
 import { MODULES, PERMISSION_MAP } from '../../constants/permissions.js';
@@ -44,18 +45,28 @@ export default function RolesPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name.trim()) return alert('Role name is required');
+    if (!form.name.trim()) return toast.error('Role name is required');
     setSaving(true);
     try {
-      if (editing) await updateRole(editing._id, form);
-      else await createRole(form);
+      if (editing) {
+        await updateRole(editing._id, form);
+        toast.success('Role updated successfully');
+      } else {
+        await createRole(form);
+        toast.success('Role created successfully');
+      }
       resetForm(); await load();
-    } catch (e) { alert(e.message); }
+    } catch (e) { toast.error(e.message || 'Operation failed'); }
     setSaving(false);
   };
 
   const handleDelete = async () => {
-    try { await deleteRole(deleteTarget._id); setDeleteTarget(null); await load(); } catch (e) { alert(e.message); }
+    try {
+      await deleteRole(deleteTarget._id);
+      setDeleteTarget(null);
+      await load();
+      toast.success('Role deleted successfully');
+    } catch (e) { toast.error(e.message || 'Delete failed'); }
   };
 
   const togglePerm = (perm) => {

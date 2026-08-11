@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { getProfile, updateProfile, changePassword } from '../../services/profileService';
+import React, { useEffect, useState, useRef } from 'react';
+import { getProfile, updateProfile, changePassword, uploadProfileImage } from '../../services/profileService';
 import useAuthStore from '../../store/authStore';
 import { FiUser, FiMail, FiPhone, FiLock, FiCheck, FiCamera } from 'react-icons/fi';
+import { getPhotoUrl } from '../../utils/image';
 
 const AdminProfilePage = () => {
   const { user: storeUser, login } = useAuthStore();
+  const fileRef = useRef(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('profile');
@@ -22,6 +24,20 @@ const AdminProfilePage = () => {
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSaving(true); setError(''); setSuccess('');
+    try {
+      const { profileImage } = await uploadProfileImage(file);
+      const updated = { ...profile, profileImage };
+      setProfile(updated);
+      login({ ...storeUser, profileImage }, localStorage.getItem('accessToken'));
+      setSuccess('Photo updated successfully');
+    } catch (e) { setError(e.response?.data?.message || 'Upload failed'); }
+    finally { setSaving(false); }
+  };
 
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
@@ -51,14 +67,18 @@ const AdminProfilePage = () => {
 
   if (loading) return <div className="py-16 text-center text-slate-400">Loading...</div>;
 
-  const photo = profile?.profileImage || `https://ui-avatars.com/api/?background=FFF0E6&color=FF6B00&name=${encodeURIComponent(profile?.name || 'A')}&size=128`;
+  const photo = getPhotoUrl(profile?.profileImage, profile?.name || 'A');
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <div className="relative">
+        <div className="relative group cursor-pointer" onClick={() => fileRef.current?.click()}>
           <img src={photo} alt="" className="h-20 w-20 rounded-full object-cover" />
+          <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition group-hover:opacity-100">
+            <FiCamera className="text-xl text-white" />
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white">{profile?.name}</h1>

@@ -18,18 +18,77 @@ const StatCard = ({ icon: Icon, label, value, color }) => (
   </div>
 );
 
-const Table = ({ cols, rows, emptyMsg = 'No data' }) => (
-  <div className="overflow-x-auto">
-    {rows.length === 0 ? (
-      <div className="py-8 text-center text-sm text-[var(--text-muted)]">{emptyMsg}</div>
-    ) : (
-      <table className="w-full text-xs">
-        <thead><tr className="border-b border-[var(--border)]">{cols.map((c, i) => <th key={i} className="px-3 py-2 text-left font-semibold text-[var(--text-secondary)]">{c.label}</th>)}</tr></thead>
-        <tbody>{rows.map((r, i) => <tr key={i} className="border-b border-[var(--border)] hover:bg-[var(--bg-hover)]">{cols.map((c, j) => <td key={j} className="px-3 py-2 text-[var(--text-primary)]">{c.render ? c.render(r) : r[c.key]}</td>)}</tr>)}</tbody>
-      </table>
-    )}
-  </div>
-);
+const PaginatedTable = ({ cols, rows = [], emptyMsg = 'No data', pageSize = 10 }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [rows]);
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const startIndex = (currentPage - 1) * pageSize;
+  const currentRows = rows.slice(startIndex, startIndex + pageSize);
+
+  return (
+    <div className="space-y-3">
+      <div className="overflow-x-auto">
+        {rows.length === 0 ? (
+          <div className="py-8 text-center text-sm text-[var(--text-muted)]">{emptyMsg}</div>
+        ) : (
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-[var(--border)]">
+                {cols.map((c, i) => (
+                  <th key={i} className="px-3 py-2 text-left font-semibold text-[var(--text-secondary)]">
+                    {c.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {currentRows.map((r, i) => (
+                <tr key={i} className="border-b border-[var(--border)] hover:bg-[var(--bg-hover)]">
+                  {cols.map((c, j) => (
+                    <td key={j} className="px-3 py-2 text-[var(--text-primary)]">
+                      {c.render ? c.render(r) : r[c.key]}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {rows.length > pageSize && (
+        <div className="flex items-center justify-between border-t border-[var(--border)] pt-3 text-xs text-[var(--text-muted)] flex-wrap gap-2">
+          <div>
+            Showing <span className="font-semibold text-[var(--text-primary)]">{startIndex + 1}</span> to <span className="font-semibold text-[var(--text-primary)]">{Math.min(startIndex + pageSize, rows.length)}</span> of <span className="font-semibold text-[var(--text-primary)]">{rows.length}</span> entries
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="rounded-lg border border-[var(--border)] px-3 py-1 text-xs font-semibold hover:bg-[var(--bg-hover)] disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <span className="px-2 font-bold text-[var(--text-primary)]">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="rounded-lg border border-[var(--border)] px-3 py-1 text-xs font-semibold hover:bg-[var(--bg-hover)] disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function AdminReports() {
   const { theme } = useThemeStore();
@@ -90,12 +149,12 @@ export default function AdminReports() {
     if (!data) return null;
 
     if (tab === 'Attendance' && subTab === 'Daily' && data.records) {
-      return <Table cols={[{ label: 'Name', key: 'fullName', render: r => r.memberId?.fullName || '-' }, { label: 'Shift', render: r => r.shiftId?.shiftName || '-' }, { label: 'Seat', render: r => r.seatId?.seatNumber || '-' }, { label: 'Check In', render: r => r.checkInTime ? new Date(r.checkInTime).toLocaleTimeString() : '-' }, { label: 'Check Out', render: r => r.checkOutTime ? new Date(r.checkOutTime).toLocaleTimeString() : '-' }, { label: 'Status', render: r => <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${r.status==='Present'?'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400':'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'}`}>{r.status}</span> }]} rows={data.records} />;
+      return <PaginatedTable cols={[{ label: 'Name', key: 'fullName', render: r => r.memberId?.fullName || '-' }, { label: 'Shift', render: r => r.shiftId?.shiftName || '-' }, { label: 'Seat', render: r => r.seatId?.seatNumber || '-' }, { label: 'Check In', render: r => r.checkInTime ? new Date(r.checkInTime).toLocaleTimeString() : '-' }, { label: 'Check Out', render: r => r.checkOutTime ? new Date(r.checkOutTime).toLocaleTimeString() : '-' }, { label: 'Status', render: r => <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${r.status==='Present' || r.status==='Checked Out' ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'}`}>{r.status}</span> }]} rows={data.records} />;
     }
     if (tab === 'Attendance' && subTab === 'Monthly' && data.byDay) {
       return (
         <>
-          <Table cols={[{ label: 'Day', render: (_, i) => `Day ${i+1}` }, { label: 'Present', render: r => r.count }]} rows={data.byDay} />
+          <PaginatedTable cols={[{ label: 'Day', render: (_, i) => `Day ${i+1}` }, { label: 'Present', render: r => r.count }]} rows={data.byDay} />
           <div className="mt-4 h-48 flex items-end gap-1 px-2">
             {data.byDay.map((d, i) => <div key={i} className="flex-1 rounded-t bg-[var(--primary)]" style={{ height: `${d.count / Math.max(...data.byDay.map(x=>x.count), 1) * 100}%`, opacity: 0.7 + (d.count/Math.max(...data.byDay.map(x=>x.count),1))*0.3 }} title={`Day ${d.day}: ${d.count}`} />)}
           </div>
@@ -105,7 +164,7 @@ export default function AdminReports() {
     if (tab === 'Attendance' && subTab === 'Yearly' && data.byMonth) {
       return (
         <>
-          <Table cols={[{ label: 'Month', render: r => MONTHS[r.month-1] }, { label: 'Present', render: r => r.present }]} rows={data.byMonth} />
+          <PaginatedTable cols={[{ label: 'Month', render: r => MONTHS[r.month-1] }, { label: 'Present', render: r => r.present }]} rows={data.byMonth} />
           <div className="mt-4 h-48 flex items-end gap-1 px-2">
             {data.byMonth.map((m, i) => <div key={i} className="flex-1 rounded-t bg-[var(--primary)]" style={{ height: `${m.present / Math.max(...data.byMonth.map(x=>x.present), 1) * 100}%`, opacity: 0.7 + (m.present/Math.max(...data.byMonth.map(x=>x.present),1))*0.3 }} title={`${MONTHS[m.month-1]}: ${m.present}`} />)}
           </div>
@@ -114,7 +173,7 @@ export default function AdminReports() {
     }
 
     if (tab === 'Fees' && subTab === 'Daily' && data.paid) {
-      return <Table cols={[{ label: 'Name', render: r => r.memberId?.fullName || '-' }, { label: 'Amount', render: r => `₹${r.amount}` }, { label: 'Plan', render: r => r.membershipId?.planType || '-' }, { label: 'Method', render: r => r.paymentMethod || '-' }, { label: 'Status', render: r => <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${r.status==='Paid'?'bg-green-100 text-green-700':'bg-yellow-100 text-yellow-700'}`}>{r.status}</span> }]} rows={[...data.paid, ...data.pending]} />;
+      return <PaginatedTable cols={[{ label: 'Name', render: r => r.memberId?.fullName || '-' }, { label: 'Amount', render: r => `₹${r.amount}` }, { label: 'Plan', render: r => r.membershipId?.planType || '-' }, { label: 'Method', render: r => r.paymentMethod || '-' }, { label: 'Status', render: r => <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${r.status==='Paid'?'bg-green-100 text-green-700':'bg-yellow-100 text-yellow-700'}`}>{r.status}</span> }]} rows={[...data.paid, ...data.pending]} />;
     }
     if (tab === 'Fees' && subTab === 'Monthly' && data.paid) {
       return (
@@ -122,12 +181,12 @@ export default function AdminReports() {
           <div className="mb-4 grid grid-cols-4 gap-2">
             {data.byDay.map((d, i) => <div key={i} className="text-center"><div className="text-[10px] text-[var(--text-muted)]">Day {d.day}</div><div className="text-xs font-bold text-[var(--text-primary)]">₹{d.amount.toLocaleString()}</div></div>)}
           </div>
-          <Table cols={[{ label: 'Name', render: r => r.memberId?.fullName || '-' }, { label: 'Amount', render: r => `₹${r.amount}` }, { label: 'Date', render: r => new Date(r.paymentDate).toLocaleDateString() }, { label: 'Status', render: r => <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${r.status==='Paid'?'bg-green-100 text-green-700':'bg-yellow-100 text-yellow-700'}`}>{r.status}</span> }]} rows={[...data.paid, ...data.pending]} />
+          <PaginatedTable cols={[{ label: 'Name', render: r => r.memberId?.fullName || '-' }, { label: 'Amount', render: r => `₹${r.amount}` }, { label: 'Date', render: r => new Date(r.paymentDate).toLocaleDateString() }, { label: 'Status', render: r => <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${r.status==='Paid'?'bg-green-100 text-green-700':'bg-yellow-100 text-yellow-700'}`}>{r.status}</span> }]} rows={[...data.paid, ...data.pending]} />
         </>
       );
     }
     if (tab === 'Fees' && subTab === 'Pending') {
-      return <Table cols={[{ label: 'Name', render: r => r.memberId?.fullName || '-' }, { label: 'Amount', render: r => `₹${r.amount}` }, { label: 'Plan', render: r => r.membershipId?.planType || '-' }, { label: 'Date', render: r => new Date(r.paymentDate).toLocaleDateString() }]} rows={data.pendingPayments} emptyMsg="No pending payments" />;
+      return <PaginatedTable cols={[{ label: 'Name', render: r => r.memberId?.fullName || '-' }, { label: 'Amount', render: r => `₹${r.amount}` }, { label: 'Plan', render: r => r.membershipId?.planType || '-' }, { label: 'Date', render: r => new Date(r.paymentDate).toLocaleDateString() }]} rows={data.pendingPayments} emptyMsg="No pending payments" />;
     }
 
     if (tab === 'Expenses' && subTab === 'Daily' && data.expenses) {
@@ -137,7 +196,7 @@ export default function AdminReports() {
             <StatCard icon={FiDollarSign} label="Total Spent" value={`₹${(data.total || 0).toLocaleString()}`} color="bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400" />
             <StatCard icon={FiGrid} label="Expenses" value={data.count || 0} color="bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400" />
           </div>
-          <Table cols={[{ label: 'Title', render: r => r.title }, { label: 'Category', render: r => r.category }, { label: 'Amount', render: r => `₹${r.amount}` }, { label: 'Method', render: r => r.paymentMethod || '-' }, { label: 'Date', render: r => new Date(r.expenseDate).toLocaleDateString() }, { label: 'By', render: r => r.addedBy?.name || '-' }]} rows={data.expenses} />
+          <PaginatedTable cols={[{ label: 'Title', render: r => r.title }, { label: 'Category', render: r => r.category }, { label: 'Amount', render: r => `₹${r.amount}` }, { label: 'Method', render: r => r.paymentMethod || '-' }, { label: 'Date', render: r => new Date(r.expenseDate).toLocaleDateString() }, { label: 'By', render: r => r.addedBy?.name || '-' }]} rows={data.expenses} />
         </>
       );
     }
@@ -153,7 +212,7 @@ export default function AdminReports() {
               {Object.entries(data.byCategory).map(([cat, amt]) => <div key={cat} className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-2 text-center"><div className="text-[10px] text-[var(--text-muted)]">{cat}</div><div className="text-xs font-bold text-[var(--text-primary)]">₹{amt.toLocaleString()}</div></div>)}
             </div>
           )}
-          <Table cols={[{ label: 'Title', render: r => r.title }, { label: 'Category', render: r => r.category }, { label: 'Amount', render: r => `₹${r.amount}` }, { label: 'Method', render: r => r.paymentMethod || '-' }, { label: 'Date', render: r => new Date(r.expenseDate).toLocaleDateString() }]} rows={data.expenses} />
+          <PaginatedTable cols={[{ label: 'Title', render: r => r.title }, { label: 'Category', render: r => r.category }, { label: 'Amount', render: r => `₹${r.amount}` }, { label: 'Method', render: r => r.paymentMethod || '-' }, { label: 'Date', render: r => new Date(r.expenseDate).toLocaleDateString() }]} rows={data.expenses} />
         </>
       );
     }
@@ -164,7 +223,7 @@ export default function AdminReports() {
             <StatCard icon={FiDollarSign} label="Total Spent" value={`₹${(data.total || 0).toLocaleString()}`} color="bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400" />
             <StatCard icon={FiGrid} label="Expenses" value={data.count || 0} color="bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400" />
           </div>
-          <Table cols={[{ label: 'Month', render: r => MONTHS[r.month-1] }, { label: 'Total', render: r => `₹${r.total.toLocaleString()}` }, { label: 'Count', render: r => r.count }]} rows={data.byMonth} />
+          <PaginatedTable cols={[{ label: 'Month', render: r => MONTHS[r.month-1] }, { label: 'Total', render: r => `₹${r.total.toLocaleString()}` }, { label: 'Count', render: r => r.count }]} rows={data.byMonth} />
           <div className="mt-4 h-48 flex items-end gap-1 px-2">
             {data.byMonth.map((m, i) => <div key={i} className="flex-1 rounded-t bg-red-500" style={{ height: `${m.total / Math.max(...data.byMonth.map(x=>x.total), 1) * 100}%`, opacity: 0.6 + (m.total/Math.max(...data.byMonth.map(x=>x.total),1))*0.4 }} title={`${MONTHS[m.month-1]}: ₹${m.total.toLocaleString()}`} />)}
           </div>
@@ -176,7 +235,7 @@ export default function AdminReports() {
       const sub = subTab === 'Active' ? 'Active' : subTab === 'Expiring' ? 'Expiring' : 'Expired';
       const list = sub === 'Active' ? (data.expiringDetails || []).filter(m => { const d = new Date(m.membershipExpiryDate); return d > new Date(Date.now() + 7*86400000); }) : sub === 'Expiring' ? data.expiringDetails : data.expiredDetails;
       return (
-        <Table
+        <PaginatedTable
           cols={[{ label: 'Name', render: r => r.fullName }, { label: 'Mobile', render: r => r.mobile }, { label: 'Seat', render: r => r.seatId?.seatNumber || '-' }, { label: 'Shift', render: r => r.shiftId?.shiftName || '-' }, { label: 'Expiry', render: r => new Date(r.membershipExpiryDate).toLocaleDateString() }, { label: 'Status', render: r => <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${sub==='Active'?'bg-green-100 text-green-700':sub==='Expiring'?'bg-yellow-100 text-yellow-700':'bg-red-100 text-red-700'}`}>{sub}</span>}]}
           rows={list}
           emptyMsg={`No ${sub.toLowerCase()} members`}
@@ -201,7 +260,7 @@ export default function AdminReports() {
               </div>
             </div>
           )}
-          <Table
+          <PaginatedTable
             cols={[{ label: 'Seat', render: r => r.seatNumber }, { label: 'Floor', render: r => r.floor }, { label: 'Type', render: r => r.seatType || 'Standard' }, { label: 'Status', render: r => <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${r.status==='Occupied'?'bg-red-100 text-red-700':r.status==='Available'?'bg-green-100 text-green-700':'bg-yellow-100 text-yellow-700'}`}>{r.status}</span> }, { label: 'Occupant', render: r => r.currentOccupant?.fullName || '-' }, { label: 'Shift', render: r => r.shiftId?.shiftName || '-' }]}
             rows={data.occupiedSeats}
           />

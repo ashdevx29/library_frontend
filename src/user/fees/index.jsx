@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { getMyMembership, requestRenewal, getMyPayments, getMyRenewals, downloadReceipt } from '../../services/paymentService';
 import { FiCalendar, FiClock, FiCheckCircle, FiAlertTriangle, FiDollarSign, FiGrid, FiCreditCard, FiDownload, FiFileText, FiRefreshCw, FiInfo } from 'react-icons/fi';
 
@@ -50,7 +51,7 @@ const UserFeesPage = () => {
       const url = window.URL.createObjectURL(new Blob([blob]));
       const a = document.createElement('a'); a.href = url; a.download = `receipt-${id.slice(-8)}.pdf`;
       document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(url);
-    } catch (e) { alert('Download failed'); }
+    } catch (e) { toast.error('Download failed'); }
   };
 
   const fmt = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';

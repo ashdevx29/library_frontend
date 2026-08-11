@@ -1,4 +1,7 @@
 import React from 'react';
+import { formatDate } from '../../utils/helpers';
+
+import { getPhotoUrl } from '../../utils/image';
 
 const box = 'rounded-2xl border border-white/70 bg-white/80 p-5 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-800/80';
 
@@ -89,10 +92,7 @@ export function UpcomingExpiryTable({ data }) {
                     <div className="flex items-center gap-2">
                       <img
                         className="h-9 w-9 rounded-full bg-orange-100 object-cover"
-                        src={
-                          x.photo ||
-                          `https://ui-avatars.com/api/?background=FFF0E6&color=FF6B00&name=${encodeURIComponent(x.fullName)}`
-                        }
+                        src={getPhotoUrl(x.photo, x.fullName)}
                         alt={x.fullName}
                       />
                       <b className="text-slate-700 dark:text-slate-200">{x.fullName}</b>

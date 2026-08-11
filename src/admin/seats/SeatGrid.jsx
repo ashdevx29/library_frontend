@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
+import toast from 'react-hot-toast';
 import { FiPlus, FiGrid, FiList, FiEye, FiEdit2, FiTrash2, FiSearch, FiFilter, FiUsers } from 'react-icons/fi';
 import { getSeats, getSeatGrid, deleteSeat, updateSeatStatus } from '../../services/seatService';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 
 const STATUS_STYLE = {
   Available: 'border-green-400 bg-green-50 dark:bg-green-900/20 dark:border-green-600',
@@ -37,6 +39,7 @@ const SeatGrid = () => {
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [floorFilter, setFloorFilter] = useState('All');
+  const [confirmId, setConfirmId] = useState(null);
   const navigate = useNavigate();
 
   const load = async () => {
@@ -87,13 +90,17 @@ const SeatGrid = () => {
     return acc;
   }, {});
 
-  const onDelete = async (id) => {
-    if (!confirm('Delete this seat?')) return;
+  const onDelete = (id) => setConfirmId(id);
+
+  const doDelete = async () => {
     try {
-      await deleteSeat(id);
-      setSeats((prev) => prev.filter((s) => s._id !== id));
+      await deleteSeat(confirmId);
+      setSeats((prev) => prev.filter((s) => s._id !== confirmId));
+      toast.success('Seat deleted successfully');
     } catch (e) {
-      alert(e.response?.data?.message || 'Delete failed');
+      toast.error(e.response?.data?.message || 'Delete failed');
+    } finally {
+      setConfirmId(null);
     }
   };
 
@@ -187,6 +194,15 @@ const SeatGrid = () => {
           </div>
         ))
       )}
+      <ConfirmDialog
+        isOpen={!!confirmId}
+        onClose={() => setConfirmId(null)}
+        onConfirm={doDelete}
+        title="Delete Seat"
+        message="Are you sure you want to delete this seat? This action cannot be undone."
+        confirmText="Delete Seat"
+        variant="danger"
+      />
     </div>
   );
 };

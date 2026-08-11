@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { getExpenses, getExpenseStats, getExpenseCategories, createExpense, updateExpense, deleteExpense, getDailyReport, getMonthlyReport, getYearlyReport } from '../../services/expenseService';
 import { FiPlus, FiEdit2, FiTrash2, FiCalendar, FiDollarSign, FiFilter, FiX } from 'react-icons/fi';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 
 const TABS = ['Expenses', 'Add Expense', 'Reports'];
 
@@ -27,6 +29,7 @@ const AdminExpensesPage = () => {
   const [form, setForm] = useState({ title: '', amount: '', category: 'General', expenseDate: new Date().toISOString().split('T')[0], description: '', paymentMethod: 'Cash' });
   const [formLoading, setFormLoading] = useState(false);
   const [formResult, setFormResult] = useState(null);
+  const [confirmId, setConfirmId] = useState(null);
 
   useEffect(() => { loadAll(); }, []);
 
@@ -79,9 +82,11 @@ const AdminExpensesPage = () => {
     setTab('Add Expense');
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Delete this expense?')) return;
-    try { await deleteExpense(id); loadAll(); } catch (e) { alert(e.response?.data?.message || 'Failed'); }
+  const handleDelete = (id) => setConfirmId(id);
+
+  const doDelete = async () => {
+    try { await deleteExpense(confirmId); loadAll(); toast.success('Expense deleted'); } catch (e) { toast.error(e.response?.data?.message || 'Failed'); }
+    setConfirmId(null);
   };
 
   const fetchReport = async () => {
@@ -271,6 +276,15 @@ const AdminExpensesPage = () => {
           )}
         </div>
       )}
+      <ConfirmDialog
+        isOpen={!!confirmId}
+        onClose={() => setConfirmId(null)}
+        onConfirm={doDelete}
+        title="Delete Expense"
+        message="Are you sure you want to delete this expense record?"
+        confirmText="Delete Expense"
+        variant="danger"
+      />
     </div>
   );
 };

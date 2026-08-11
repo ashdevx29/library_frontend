@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { getShifts, deleteShift } from '../../services/shiftService';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 
 const ShiftsList = () => {
   const [shifts, setShifts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [confirmId, setConfirmId] = useState(null);
   const navigate = useNavigate();
 
   const load = async () => {
@@ -23,13 +26,17 @@ const ShiftsList = () => {
 
   useEffect(() => { load(); }, []);
 
-  const onDelete = async (id) => {
-    if (!confirm('Delete this shift?')) return;
+  const onDelete = (id) => setConfirmId(id);
+
+  const doDelete = async () => {
     try {
-      await deleteShift(id);
-      setShifts((prev) => prev.filter((s) => s._id !== id));
+      await deleteShift(confirmId);
+      setShifts((prev) => prev.filter((s) => s._id !== confirmId));
+      toast.success('Shift deleted successfully');
     } catch (e) {
-      alert(e.response?.data?.message || 'Delete failed');
+      toast.error(e.response?.data?.message || 'Delete failed');
+    } finally {
+      setConfirmId(null);
     }
   };
 
@@ -91,6 +98,15 @@ const ShiftsList = () => {
           </tbody>
         </table>
       </div>
+      <ConfirmDialog
+        isOpen={!!confirmId}
+        onClose={() => setConfirmId(null)}
+        onConfirm={doDelete}
+        title="Delete Shift"
+        message="Are you sure you want to delete this shift? This action cannot be undone."
+        confirmText="Delete Shift"
+        variant="danger"
+      />
     </div>
   );
 };

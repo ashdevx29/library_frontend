@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { getPayments, getPaymentStats, getPendingDues, createPayment, markPaid, markFailed, downloadReceipt, downloadInvoice, getMembers, getPendingRenewals, getAllRenewals, approveRenewal, rejectRenewal, getExpiredMembers, getPlanStats } from '../../services/paymentService';
 import { FiDollarSign, FiCalendar, FiCheckCircle, FiXCircle, FiClock, FiUser, FiFilter, FiCheck, FiX, FiPlus, FiDownload, FiFileText, FiAlertTriangle, FiRefreshCw } from 'react-icons/fi';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 
 const TABS = ['Dashboard', 'Payments', 'Add Payment', 'Pending Dues', 'Renewals', 'Expired Members'];
 
@@ -18,7 +20,10 @@ const AdminFeesPage = () => {
   const [expiredFilter, setExpiredFilter] = useState('all');
   const [rejectModal, setRejectModal] = useState(null);
   const [rejectNote, setRejectNote] = useState('');
-  const [addForm, setAddForm] = useState({ memberId: '', amount: '', paymentMethod: 'Cash', paymentDate: new Date().toISOString().split('T')[0], transactionId: '', status: 'Paid' });
+  const [confirmMarkFailedId, setConfirmMarkFailedId] = useState(null);
+  const [confirmApproveId, setConfirmApproveId] = useState(null);
+  const [paymentsPage, setPaymentsPage] = useState(1);
+  const [addForm, setAddForm] = useState({ memberId: '', amount: '', discount: '', paymentMethod: 'Cash', paymentDate: new Date().toISOString().split('T')[0], transactionId: '', status: 'Paid' });
   const [addLoading, setAddLoading] = useState(false);
   const [addResult, setAddResult] = useState(null);
   const [filterStatus, setFilterStatus] = useState('');
@@ -67,11 +72,19 @@ const AdminFeesPage = () => {
     finally { setAddLoading(false); }
   };
 
-  const handleMarkPaid = async (id) => { try { await markPaid(id); loadDues(); loadData(); } catch (e) { alert(e.response?.data?.message || 'Failed'); } };
-  const handleMarkFailed = async (id) => { if (!confirm('Mark as failed?')) return; try { await markFailed(id); loadDues(); loadData(); } catch (e) { alert(e.response?.data?.message || 'Failed'); } };
+  const handleMarkPaid = async (id) => { try { await markPaid(id); loadDues(); loadData(); toast.success('Marked as Paid'); } catch (e) { toast.error(e.response?.data?.message || 'Failed'); } };
+  const handleMarkFailed = (id) => setConfirmMarkFailedId(id);
+  const doMarkFailed = async () => {
+    try { await markFailed(confirmMarkFailedId); loadDues(); loadData(); toast.success('Marked as Failed'); } catch (e) { toast.error(e.response?.data?.message || 'Failed'); }
+    setConfirmMarkFailedId(null);
+  };
 
-  const handleApprove = async (id) => { if (!confirm('Approve renewal?')) return; try { await approveRenewal(id); loadRenewals(); loadData(); } catch (e) { alert(e.response?.data?.message || 'Failed'); } };
-  const handleReject = async () => { if (!rejectModal) return; try { await rejectRenewal(rejectModal, rejectNote); setRejectModal(null); setRejectNote(''); loadRenewals(); } catch (e) { alert(e.response?.data?.message || 'Failed'); } };
+  const handleApprove = (id) => setConfirmApproveId(id);
+  const doApprove = async () => {
+    try { await approveRenewal(confirmApproveId); loadRenewals(); loadData(); toast.success('Renewal approved'); } catch (e) { toast.error(e.response?.data?.message || 'Failed'); }
+    setConfirmApproveId(null);
+  };
+  const handleReject = async () => { if (!rejectModal) return; try { await rejectRenewal(rejectModal, rejectNote); setRejectModal(null); setRejectNote(''); loadRenewals(); toast.success('Renewal rejected'); } catch (e) { toast.error(e.response?.data?.message || 'Failed'); } };
 
   const handleDownload = async (id, type) => {
     try {
@@ -79,7 +92,7 @@ const AdminFeesPage = () => {
       const url = window.URL.createObjectURL(new Blob([blob]));
       const a = document.createElement('a'); a.href = url; a.download = `${type}-${id.slice(-8)}.pdf`;
       document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(url);
-    } catch (e) { alert('Download failed'); }
+    } catch (e) { toast.error('Download failed'); }
   };
 
   const fmt = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
@@ -109,9 +122,9 @@ const AdminFeesPage = () => {
               [FiDollarSign, 'Total Revenue', money(stats.totalRevenue), 'green'],
               [FiCalendar, 'This Month', money(stats.monthRevenue), 'blue'],
               [FiDollarSign, 'This Year', money(stats.yearRevenue), 'purple'],
-              [FiClock, 'Pending Dues', stats.pendingDues, 'yellow'],
-              [FiCheckCircle, 'Total Transactions', stats.totalTransactions, 'green'],
-              [FiAlertTriangle, 'Pending Renewals', planStats?.pendingRenewals ?? stats.pendingRenewals, 'orange'],
+              [FiClock, 'Pending Dues', stats.pendingDues ?? 0, 'yellow'],
+              [FiCheckCircle, 'Total Transactions', stats.totalTransactions ?? 0, 'green'],
+              [FiAlertTriangle, 'Pending Renewals', planStats?.pendingRenewals ?? stats.pendingRenewals ?? 0, 'orange'],
             ].map(([Icon, label, value, color]) => (
               <div key={label} className={`rounded-2xl bg-${color}-50 p-5 dark:bg-${color}-900/20`}>
                 <Icon className={`mb-2 text-${color}-500`} /><p className="text-xs text-slate-500">{label}</p><p className={`text-2xl font-bold text-${color}-600`}>{value}</p>
@@ -125,7 +138,7 @@ const AdminFeesPage = () => {
               <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-slate-800">
                 <h3 className="mb-3 font-semibold text-slate-800 dark:text-white">Plan-wise Revenue</h3>
                 <div className="space-y-3">
-                  {planStats.revenueBreakdown.map(p => (
+                  {(planStats.revenueBreakdown || []).map(p => (
                     <div key={p.plan} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 dark:bg-slate-700/50">
                       <div>
                         <p className="font-medium text-slate-800 dark:text-white">{p.label}</p>
@@ -134,26 +147,26 @@ const AdminFeesPage = () => {
                       <p className="text-lg font-bold text-slate-800 dark:text-white">{money(p.totalRevenue)}</p>
                     </div>
                   ))}
-                  {!planStats.revenueBreakdown.some(p => p.totalRevenue > 0) && <p className="py-4 text-center text-sm text-slate-400">No revenue data yet</p>}
+                  {!(planStats.revenueBreakdown || []).some(p => p.totalRevenue > 0) && <p className="py-4 text-center text-sm text-slate-400">No revenue data yet</p>}
                 </div>
               </div>
               <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-slate-800">
                 <h3 className="mb-3 font-semibold text-slate-800 dark:text-white">Active Members by Plan</h3>
                 <div className="space-y-3">
-                  {planStats.memberBreakdown.map(p => (
+                  {(planStats.memberBreakdown || []).map(p => (
                     <div key={p.plan} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 dark:bg-slate-700/50">
                       <p className="font-medium text-slate-800 dark:text-white">{p.label}</p>
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-24 rounded-full bg-slate-200 dark:bg-slate-600">
-                          <div className="h-full rounded-full bg-orange-500" style={{ width: `${Math.min(100, (p.count / Math.max(...planStats.memberBreakdown.map(x => x.count), 1)) * 100)}%` }} />
+                          <div className="h-full rounded-full bg-orange-500" style={{ width: `${Math.min(100, (p.count / Math.max(...(planStats.memberBreakdown || []).map(x => x.count), 1)) * 100)}%` }} />
                         </div>
                         <span className="text-sm font-bold text-slate-800 dark:text-white">{p.count}</span>
                       </div>
                     </div>
                   ))}
                   <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-500">
-                    <span>Expiring this week: <b className="text-orange-600">{planStats.expiringThisWeek}</b></span>
-                    <span>Already expired: <b className="text-red-600">{planStats.expiredMembers}</b></span>
+                    <span>Expiring this week: <b className="text-orange-600">{planStats.expiringThisWeek || 0}</b></span>
+                    <span>Already expired: <b className="text-red-600">{planStats.expiredMembers || 0}</b></span>
                   </div>
                 </div>
               </div>
@@ -163,9 +176,9 @@ const AdminFeesPage = () => {
           {/* Recent Payments */}
           <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-slate-800">
             <h3 className="mb-3 font-semibold text-slate-800 dark:text-white">Recent Payments</h3>
-            {!stats.recentPayments.length ? <p className="py-8 text-center text-slate-400">No payments yet</p> : (
+            {!stats.recentPayments?.length ? <p className="py-8 text-center text-slate-400">No payments yet</p> : (
               <div className="space-y-2">
-                {stats.recentPayments.map(p => (
+                {(stats.recentPayments || []).map(p => (
                   <div key={p._id} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 dark:bg-slate-700/50">
                     <div className="flex items-center gap-3">
                       <div className="h-9 w-9 rounded-full bg-orange-100 flex items-center justify-center dark:bg-orange-900/30"><FiUser className="text-orange-500" /></div>
@@ -189,30 +202,59 @@ const AdminFeesPage = () => {
             <select value={filterMethod} onChange={e => setFilterMethod(e.target.value)} className={field + ' w-auto'}><option value="">All Methods</option>{['Cash', 'UPI', 'Bank Transfer'].map(m => <option key={m}>{m}</option>)}</select>
           </div>
           {!payments.length ? <p className="py-8 text-center text-slate-400">No payments</p> : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead><tr className="border-b border-slate-200 dark:border-slate-700">
-                  <th className="py-2 px-3 text-slate-500">Member</th><th className="py-2 px-3 text-slate-500">Plan</th><th className="py-2 px-3 text-slate-500">Amount</th><th className="py-2 px-3 text-slate-500">Method</th><th className="py-2 px-3 text-slate-500">Date</th><th className="py-2 px-3 text-slate-500">Status</th><th className="py-2 px-3 text-slate-500">Actions</th>
-                </tr></thead>
-                <tbody>
-                  {payments.map(p => (
-                    <tr key={p._id} className="border-b border-slate-100 dark:border-slate-700/50">
-                      <td className="py-2.5 px-3 font-medium text-slate-800 dark:text-white">{p.memberId?.fullName || '—'}</td>
-                      <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">{p.membershipId?.planType || '—'}</td>
-                      <td className="py-2.5 px-3 font-bold text-slate-800 dark:text-white">{money(p.amount)}</td>
-                      <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">{p.paymentMethod}</td>
-                      <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">{fmt(p.paymentDate)}</td>
-                      <td className="py-2.5 px-3"><span className={`rounded-full px-2 py-0.5 text-xs font-bold ${BADGE[p.status]}`}>{p.status}</span></td>
-                      <td className="py-2.5 px-3">
-                        <div className="flex gap-1">
-                          <button onClick={() => handleDownload(p._id, 'receipt')} title="Receipt" className="rounded-lg bg-blue-50 p-1.5 text-blue-500 hover:bg-blue-100"><FiFileText size={14} /></button>
-                          <button onClick={() => handleDownload(p._id, 'invoice')} title="Invoice" className="rounded-lg bg-purple-50 p-1.5 text-purple-500 hover:bg-purple-100"><FiDownload size={14} /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-3">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead><tr className="border-b border-slate-200 dark:border-slate-700">
+                    <th className="py-2 px-3 text-slate-500">Member</th><th className="py-2 px-3 text-slate-500">Plan</th><th className="py-2 px-3 text-slate-500">Amount</th><th className="py-2 px-3 text-slate-500">Method</th><th className="py-2 px-3 text-slate-500">Date</th><th className="py-2 px-3 text-slate-500">Status</th><th className="py-2 px-3 text-slate-500">Actions</th>
+                  </tr></thead>
+                  <tbody>
+                    {payments.slice((paymentsPage - 1) * 10, paymentsPage * 10).map(p => (
+                      <tr key={p._id} className="border-b border-slate-100 dark:border-slate-700/50">
+                        <td className="py-2.5 px-3 font-medium text-slate-800 dark:text-white">{p.memberId?.fullName || '—'}</td>
+                        <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">{p.membershipId?.planType || '—'}</td>
+                        <td className="py-2.5 px-3 font-bold text-slate-800 dark:text-white">{money(p.amount)}</td>
+                        <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">{p.paymentMethod}</td>
+                        <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">{fmt(p.paymentDate)}</td>
+                        <td className="py-2.5 px-3"><span className={`rounded-full px-2 py-0.5 text-xs font-bold ${BADGE[p.status]}`}>{p.status}</span></td>
+                        <td className="py-2.5 px-3">
+                          <div className="flex gap-1">
+                            <button onClick={() => handleDownload(p._id, 'receipt')} title="Receipt" className="rounded-lg bg-blue-50 p-1.5 text-blue-500 hover:bg-blue-100"><FiFileText size={14} /></button>
+                            <button onClick={() => handleDownload(p._id, 'invoice')} title="Invoice" className="rounded-lg bg-purple-50 p-1.5 text-purple-500 hover:bg-purple-100"><FiDownload size={14} /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {payments.length > 10 && (
+                <div className="flex items-center justify-between border-t border-slate-200 pt-3 text-xs text-slate-500 dark:border-slate-700 flex-wrap gap-2">
+                  <div>
+                    Showing <span className="font-semibold text-slate-800 dark:text-white">{(paymentsPage - 1) * 10 + 1}</span> to <span className="font-semibold text-slate-800 dark:text-white">{Math.min(paymentsPage * 10, payments.length)}</span> of <span className="font-semibold text-slate-800 dark:text-white">{payments.length}</span> entries
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setPaymentsPage(p => Math.max(1, p - 1))}
+                      disabled={paymentsPage === 1}
+                      className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:hover:bg-slate-700"
+                    >
+                      Previous
+                    </button>
+                    <span className="px-2 font-bold text-slate-800 dark:text-white">
+                      Page {paymentsPage} of {Math.ceil(payments.length / 10)}
+                    </span>
+                    <button
+                      onClick={() => setPaymentsPage(p => Math.min(Math.ceil(payments.length / 10), p + 1))}
+                      disabled={paymentsPage >= Math.ceil(payments.length / 10)}
+                      className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:hover:bg-slate-700"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -230,8 +272,13 @@ const AdminFeesPage = () => {
                 {members.map(m => <option key={m._id} value={m._id}>{m.fullName} — {m.mobile}</option>)}
               </select>
             </div>
-            <div><label className={label}>Amount (₹) *</label>
-              <input type="number" value={addForm.amount} onChange={e => setAddForm({ ...addForm, amount: e.target.value })} required className={field} />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div><label className={label}>Amount (₹) *</label>
+                <input type="number" value={addForm.amount} onChange={e => setAddForm({ ...addForm, amount: e.target.value })} required className={field} placeholder="Enter fee amount" />
+              </div>
+              <div><label className={label}>Discount (₹) (optional)</label>
+                <input type="number" value={addForm.discount} onChange={e => setAddForm({ ...addForm, discount: e.target.value })} className={field} placeholder="Discount amount" />
+              </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div><label className={label}>Payment Method *</label>
@@ -263,24 +310,38 @@ const AdminFeesPage = () => {
             <div className="rounded-2xl bg-white p-8 text-center shadow-sm dark:bg-slate-800">
               <FiCheckCircle className="mx-auto mb-3 text-4xl text-green-400" /><p className="text-slate-400">No pending dues</p>
             </div>
-          ) : dues.map(p => (
-            <div key={p._id} className="rounded-2xl bg-white p-5 shadow-sm dark:bg-slate-800">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center dark:bg-yellow-900/30"><FiDollarSign className="text-yellow-500" /></div>
-                  <div><p className="font-semibold text-slate-800 dark:text-white">{p.memberId?.fullName || '—'}</p><p className="text-xs text-slate-400">{p.memberId?.mobile} · {fmt(p.paymentDate)}</p></div>
+          ) : dues.map(p => {
+            const expiry = p.memberId?.membershipExpiryDate || p.membershipId?.expiryDate;
+            const diffDays = expiry ? Math.ceil((new Date(expiry) - new Date()) / (1000 * 60 * 60 * 24)) : null;
+            return (
+              <div key={p._id} className="rounded-2xl bg-white p-5 shadow-sm dark:bg-slate-800 border border-yellow-200 dark:border-yellow-900/30">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center dark:bg-yellow-900/30"><FiDollarSign className="text-yellow-500" /></div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-slate-800 dark:text-white">{p.memberId?.fullName || '—'}</p>
+                        {diffDays !== null && (
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${diffDays > 0 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : diffDays === 0 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-red-200 text-red-800 dark:bg-red-900/50 dark:text-red-300'}`}>
+                            {diffDays > 0 ? `Due in ${diffDays} days` : diffDays === 0 ? 'Due Today' : `Overdue by ${Math.abs(diffDays)} days`}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-400">{p.memberId?.mobile || '—'} · Plan: {p.membershipId?.planType || '—'} · Date: {fmt(p.paymentDate)}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-bold text-slate-800 dark:text-white">{money(p.amount)}</p>
+                    <p className="text-xs text-slate-400">{p.paymentMethod}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-xl font-bold text-slate-800 dark:text-white">{money(p.amount)}</p>
-                  <p className="text-xs text-slate-400">{p.paymentMethod}</p>
+                <div className="mt-3 flex gap-2">
+                  <button onClick={() => handleMarkPaid(p._id)} className="inline-flex items-center gap-1 rounded-lg bg-green-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-600"><FiCheck /> Mark Paid</button>
+                  <button onClick={() => handleMarkFailed(p._id)} className="inline-flex items-center gap-1 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-600"><FiX /> Mark Failed</button>
                 </div>
               </div>
-              <div className="mt-3 flex gap-2">
-                <button onClick={() => handleMarkPaid(p._id)} className="inline-flex items-center gap-1 rounded-lg bg-green-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-600"><FiCheck /> Mark Paid</button>
-                <button onClick={() => handleMarkFailed(p._id)} className="inline-flex items-center gap-1 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-600"><FiX /> Mark Failed</button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -380,6 +441,24 @@ const AdminFeesPage = () => {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        isOpen={!!confirmMarkFailedId}
+        onClose={() => setConfirmMarkFailedId(null)}
+        onConfirm={doMarkFailed}
+        title="Mark as Failed"
+        message="Are you sure you want to mark this payment as failed?"
+        confirmText="Mark Failed"
+        variant="danger"
+      />
+      <ConfirmDialog
+        isOpen={!!confirmApproveId}
+        onClose={() => setConfirmApproveId(null)}
+        onConfirm={doApprove}
+        title="Approve Renewal"
+        message="Are you sure you want to approve this renewal request?"
+        confirmText="Approve"
+        variant="success"
+      />
     </div>
   );
 };

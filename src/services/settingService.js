@@ -15,3 +15,5 @@ export const getInvoiceSettings = make('invoice').get;
 export const updateInvoiceSettings = make('invoice').update;
 export const getSMTPSettings = make('smtp').get;
 export const updateSMTPSettings = make('smtp').update;
+export const getPaymentGatewaySettings = make('payment-gateway').get;
+export const updatePaymentGatewaySettings = make('payment-gateway').update;

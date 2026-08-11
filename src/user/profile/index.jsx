@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { getProfile, updateProfile, uploadProfileImage } from '../../services/profileService';
 import useAuthStore from '../../store/authStore';
 import { FiUser, FiMail, FiPhone, FiCheck, FiCamera, FiGrid, FiMapPin, FiCreditCard, FiCalendar, FiRefreshCw } from 'react-icons/fi';
+import { getPhotoUrl } from '../../utils/image';
 
 const UserProfilePage = () => {
   const { user: storeUser, login } = useAuthStore();
@@ -64,7 +65,7 @@ const UserProfilePage = () => {
 
   if (loading) return <div className="py-16 text-center text-slate-400">Loading...</div>;
 
-  const photo = profile?.profileImage || `https://ui-avatars.com/api/?background=FFF0E6&color=FF6B00&name=${encodeURIComponent(profile?.name || 'U')}&size=128`;
+  const photo = getPhotoUrl(profile?.profileImage, profile?.name || 'U');
   const daysLeft = member ? Math.max(Math.ceil((new Date(member.membershipExpiryDate) - new Date()) / 86400000), 0) : 0;
 
   return (

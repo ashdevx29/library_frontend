@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiEye, FiEdit2, FiRefreshCw, FiMessageCircle, FiGrid, FiClock, FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { getPhotoUrl } from '../../utils/image';
 
 const REMINDER_DAYS = [3, 5, 7];
 
@@ -19,7 +20,7 @@ const MemberCard = ({ member }) => {
     : isExpired ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
     : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400';
 
-  const photo = member.photo || `https://ui-avatars.com/api/?background=FFF0E6&color=FF6B00&name=${encodeURIComponent(member.fullName)}`;
+  const photo = getPhotoUrl(member.photo, member.fullName);
 
   return (
     <article className="rounded-2xl border border-white/70 bg-white/80 p-5 shadow-sm backdrop-blur transition hover:shadow-md dark:border-slate-700 dark:bg-slate-800/80">

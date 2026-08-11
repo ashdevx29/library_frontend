@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiGlobe, FiClock, FiUsers, FiFileText, FiMail, FiSave, FiImage, FiCheck } from 'react-icons/fi';
+import { FiGlobe, FiClock, FiUsers, FiFileText, FiMail, FiSave, FiImage, FiCheck, FiCreditCard } from 'react-icons/fi';
 import useThemeStore, { API_BASE } from '../../store/themeStore';
 import {
   getSettings, updateSettings,
@@ -7,6 +7,7 @@ import {
   getMembershipSettings, updateMembershipSettings,
   getInvoiceSettings, updateInvoiceSettings,
   getSMTPSettings, updateSMTPSettings,
+  getPaymentGatewaySettings, updatePaymentGatewaySettings,
 } from '../../services/settingService.js';
 import { uploadThemeAsset } from '../../services/themeService.js';
 import { PLAN_TYPES } from '../../constants';
@@ -17,6 +18,7 @@ const TABS = [
   { id: 'membership', label: 'Membership', icon: FiUsers },
   { id: 'invoice', label: 'Invoice', icon: FiFileText },
   { id: 'smtp', label: 'SMTP', icon: FiMail },
+  { id: 'gateway', label: 'Payment Gateway', icon: FiCreditCard },
 ];
 
 const assetUrl = (p) => {
@@ -37,15 +39,16 @@ export default function SettingsPage() {
   const [membership, setMembership] = useState({});
   const [invoice, setInvoice] = useState({});
   const [smtp, setSmtp] = useState({});
+  const [gateway, setGateway] = useState({});
 
   useEffect(() => {
     (async () => {
       try {
-        const [g, a, m, i, s] = await Promise.all([
+        const [g, a, m, i, s, gw] = await Promise.all([
           getSettings(), getAttendanceSettings(), getMembershipSettings(),
-          getInvoiceSettings(), getSMTPSettings(),
+          getInvoiceSettings(), getSMTPSettings(), getPaymentGatewaySettings(),
         ]);
-        setGeneral(g); setAttendance(a); setMembership(m); setInvoice(i); setSmtp(s);
+        setGeneral(g); setAttendance(a); setMembership(m); setInvoice(i); setSmtp(s); setGateway(gw || {});
       } catch (e) { showMsg('Failed to load settings', 'error'); }
       setLoading(false);
     })();
@@ -237,6 +240,46 @@ export default function SettingsPage() {
               <InputField label="From Email" type="email" value={smtp.from} onChange={v => setSmtp(p => ({ ...p, from: v }))} placeholder="noreply@library.com" />
             </div>
             <SaveBtn onClick={() => save('SMTP', smtp, updateSMTPSettings)} />
+          </div>
+        )}
+
+        {/* ═══════ PAYMENT GATEWAY ═══════ */}
+        {tab === 'gateway' && (
+          <div className="space-y-6">
+            <h2 className={sectionTitle}>Payment Gateway Settings</h2>
+            
+            {/* Razorpay */}
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-input)]/50 p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">Razorpay Integration</h3>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={!!gateway.razorpayEnabled} onChange={e => setGateway(p => ({ ...p, razorpayEnabled: e.target.checked }))} className="rounded" />
+                  <span className="text-xs font-semibold text-[var(--primary)]">Enable Razorpay</span>
+                </label>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <InputField label="Razorpay Key ID" value={gateway.razorpayKeyId} onChange={v => setGateway(p => ({ ...p, razorpayKeyId: v }))} placeholder="rzp_live_..." />
+                <InputField label="Razorpay Key Secret" type="password" value={gateway.razorpayKeySecret} onChange={v => setGateway(p => ({ ...p, razorpayKeySecret: v }))} placeholder="Enter Razorpay Secret" />
+              </div>
+            </div>
+
+            {/* Stripe */}
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-input)]/50 p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">Stripe Integration</h3>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={!!gateway.stripeEnabled} onChange={e => setGateway(p => ({ ...p, stripeEnabled: e.target.checked }))} className="rounded" />
+                  <span className="text-xs font-semibold text-[var(--primary)]">Enable Stripe</span>
+                </label>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <InputField label="Stripe Publishable Key" value={gateway.stripePublishableKey} onChange={v => setGateway(p => ({ ...p, stripePublishableKey: v }))} placeholder="pk_live_..." />
+                <InputField label="Stripe Secret Key" type="password" value={gateway.stripeSecretKey} onChange={v => setGateway(p => ({ ...p, stripeSecretKey: v }))} placeholder="sk_live_..." />
+                <InputField label="Stripe Webhook Secret" type="password" value={gateway.stripeWebhookSecret} onChange={v => setGateway(p => ({ ...p, stripeWebhookSecret: v }))} placeholder="whsec_..." />
+              </div>
+            </div>
+
+            <SaveBtn onClick={() => save('Payment Gateway', gateway, updatePaymentGatewaySettings)} />
           </div>
         )}
       </div>

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import useAuthStore from '../../store/authStore';
 import { getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement } from '../../services/announcementService.js';
 import { FiVolume2, FiPlus, FiEdit2, FiTrash2, FiX, FiCalendar, FiCheckCircle, FiClock } from 'react-icons/fi';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 
 export default function AnnouncementsPage() {
   const { user } = useAuthStore();
@@ -10,6 +12,7 @@ export default function AnnouncementsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ title: '', description: '', startDate: '', endDate: '', status: 'Active' });
+  const [confirmId, setConfirmId] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -27,14 +30,17 @@ export default function AnnouncementsPage() {
       if (editing) await updateAnnouncement(editing._id, form);
       else await createAnnouncement(form);
       resetForm(); await load();
-    } catch (e) { alert(e.message); }
+      toast.success(editing ? 'Announcement updated' : 'Announcement created');
+    } catch (e) { toast.error(e.message); }
   };
 
   const handleEdit = (a) => { setForm({ title: a.title, description: a.description, startDate: a.startDate?.split('T')[0] || '', endDate: a.endDate?.split('T')[0] || '', status: a.status }); setEditing(a); setShowForm(true); };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Delete this announcement?')) return;
-    try { await deleteAnnouncement(id); await load(); } catch (e) { alert(e.message); }
+  const handleDelete = (id) => setConfirmId(id);
+
+  const doDelete = async () => {
+    try { await deleteAnnouncement(confirmId); await load(); toast.success('Announcement deleted'); } catch (e) { toast.error(e.message); }
+    setConfirmId(null);
   };
 
   const now = new Date();
@@ -118,6 +124,15 @@ export default function AnnouncementsPage() {
           })}
         </div>
       )}
+      <ConfirmDialog
+        isOpen={!!confirmId}
+        onClose={() => setConfirmId(null)}
+        onConfirm={doDelete}
+        title="Delete Announcement"
+        message="Are you sure you want to delete this announcement?"
+        confirmText="Delete"
+        variant="danger"
+      />
     </div>
   );
 }

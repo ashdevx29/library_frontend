@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import useAuthStore from '../../store/authStore';
 import { getNotifications, createNotification, sendNotification, deleteNotification, getNotificationStats } from '../../services/notificationService.js';
 import { getMembers } from '../../services/memberService.js';
 import { FiBell, FiPlus, FiSend, FiTrash2, FiFilter, FiClock, FiCheckCircle, FiFileText, FiAlertTriangle, FiUsers, FiX, FiEye } from 'react-icons/fi';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 
 const TYPES = ['Fee Reminder', 'Membership Expiry', 'Attendance Alert', 'General Notice'];
 const ROLES = ['All', 'Student', 'Staff'];
@@ -28,6 +30,8 @@ export default function AdminNotifications() {
   const [filter, setFilter] = useState({ type: '', status: '' });
   const [viewNotif, setViewNotif] = useState(null);
   const [sending, setSending] = useState(null);
+  const [confirmSendId, setConfirmSendId] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   const [form, setForm] = useState({
     title: '', message: '', type: 'General Notice', targetRole: 'All', targetMembers: [],
@@ -54,27 +58,32 @@ export default function AdminNotifications() {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!form.title || !form.message) return alert('Title and message are required');
+    if (!form.title || !form.message) return toast.error('Title and message are required');
     try {
       setLoading(true);
-      const created = await createNotification(form);
+      await createNotification(form);
       setTab('list');
       setForm({ title: '', message: '', type: 'General Notice', targetRole: 'All', targetMembers: [] });
       await load();
-    } catch (e) { alert(e.message); }
+      toast.success('Notification created');
+    } catch (e) { toast.error(e.message); }
     setLoading(false);
   };
 
-  const handleSend = async (id) => {
-    if (!confirm('Send this notification to all target recipients?')) return;
-    setSending(id);
-    try { await sendNotification(id); await load(); } catch (e) { alert(e.message); }
+  const handleSend = (id) => setConfirmSendId(id);
+
+  const doSend = async () => {
+    setSending(confirmSendId);
+    try { await sendNotification(confirmSendId); await load(); toast.success('Notification sent!'); } catch (e) { toast.error(e.message); }
     setSending(null);
+    setConfirmSendId(null);
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Delete this notification?')) return;
-    try { await deleteNotification(id); await load(); } catch (e) { alert(e.message); }
+  const handleDelete = (id) => setConfirmDeleteId(id);
+
+  const doDelete = async () => {
+    try { await deleteNotification(confirmDeleteId); await load(); toast.success('Notification deleted'); } catch (e) { toast.error(e.message); }
+    setConfirmDeleteId(null);
   };
 
   const toggleMember = (id) => {
@@ -271,6 +280,24 @@ export default function AdminNotifications() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        isOpen={!!confirmSendId}
+        onClose={() => setConfirmSendId(null)}
+        onConfirm={doSend}
+        title="Send Notification"
+        message="Send this notification to all target recipients?"
+        confirmText="Yes, Send"
+        variant="success"
+      />
+      <ConfirmDialog
+        isOpen={!!confirmDeleteId}
+        onClose={() => setConfirmDeleteId(null)}
+        onConfirm={doDelete}
+        title="Delete Notification"
+        message="Are you sure you want to delete this notification?"
+        confirmText="Delete"
+        variant="danger"
+      />
     </div>
   );
 }

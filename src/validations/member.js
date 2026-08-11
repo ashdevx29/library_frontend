@@ -12,6 +12,9 @@ export const memberSchema = z.object({
   confirmPassword: z.string().optional().or(z.literal('')),
   joiningDate: z.string().min(1, 'Joining date is required'),
   membershipPlan: z.enum(['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly'], { required_error: 'Plan is required' }),
+  amount: z.union([z.string(), z.number()]).optional(),
+  paymentMethod: z.string().optional(),
+  paymentStatus: z.string().optional(),
 }).refine(data => {
   if (data.password && data.password !== data.confirmPassword) return false;
   return true;

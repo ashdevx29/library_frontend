@@ -7,6 +7,7 @@ import {
 } from 'react-icons/fi';
 import useAuthStore from '../store/authStore';
 import useThemeStore, { API_BASE } from '../store/themeStore';
+import { getPhotoUrl } from '../utils/image';
 
 const navItems = [
   [FiHome, 'Dashboard', '/admin/dashboard'],
@@ -134,9 +135,11 @@ export default function AdminLayout() {
                 onClick={() => setProfileOpen(!profileOpen)}
                 className="flex items-center gap-2 rounded-xl p-1.5 hover:bg-orange-50 dark:hover:bg-slate-800"
               >
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-orange-500 font-bold text-white">
-                  {user?.name?.[0] || 'A'}
-                </span>
+                <img
+                  src={getPhotoUrl(user?.profileImage, user?.name || 'A')}
+                  alt=""
+                  className="h-9 w-9 rounded-xl object-cover"
+                />
                 <span className="hidden text-left sm:block">
                   <b className="block text-sm text-slate-800 dark:text-slate-100">{user?.name || 'Admin'}</b>
                   <small className="text-slate-500 dark:text-slate-400">{user?.role}</small>

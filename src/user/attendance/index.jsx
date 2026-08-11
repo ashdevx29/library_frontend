@@ -24,8 +24,6 @@ const UserAttendancePage = () => {
       .finally(() => setLoading(false));
   }, [currentMonth]);
 
-  const [manualToken, setManualToken] = useState('');
-
   const processScanResult = async (decodedText, scanAction) => {
     const tokenMatch = decodedText.match(/qr=([^&]+)/);
     const token = tokenMatch ? tokenMatch[1] : decodedText;
@@ -49,7 +47,6 @@ const UserAttendancePage = () => {
     setAction(scanAction);
     setResult(null);
     setError('');
-    setManualToken('');
     setScanning(true);
 
     setTimeout(() => {
@@ -73,16 +70,9 @@ const UserAttendancePage = () => {
         () => {}
       ).catch(() => {
         setScanning(false);
-        setError('Camera access denied. Please allow camera permissions or use manual entry below.');
+        setError('Camera access denied or camera not available. Please grant camera permission.');
       });
     }, 500);
-  };
-
-  const handleManualSubmit = async () => {
-    if (!manualToken.trim()) return;
-    setResult(null);
-    setError('');
-    await processScanResult(manualToken.trim(), action);
   };
 
   const stopScanner = () => {
@@ -92,7 +82,6 @@ const UserAttendancePage = () => {
     setAction(null);
     setScanning(false);
     setResult(null);
-    setManualToken('');
 
     if (scanner) {
       scanner.stop().then(() => scanner.clear()).catch(() => {});
@@ -183,43 +172,23 @@ const UserAttendancePage = () => {
               </button>
             </div>
 
-            <div id="qr-reader" ref={containerRef} className="rounded-xl overflow-hidden mb-4" />
+            <div id="qr-reader" ref={containerRef} className="rounded-xl overflow-hidden mb-4 border border-slate-200 dark:border-slate-700 bg-black min-h-[250px]" />
 
             {scanning && (
-              <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
-                <FiCamera className="animate-pulse" /> Scanning...
+              <div className="flex items-center justify-center gap-2 text-sm font-semibold text-orange-600 dark:text-orange-400 py-2">
+                <FiCamera className="animate-pulse text-lg" /> Scanning QR Code...
               </div>
             )}
 
             {error && (
-              <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-900/20">{error}</div>
+              <div className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600 dark:bg-red-900/20">{error}</div>
             )}
 
             {result && (
-              <div className={`rounded-xl px-4 py-3 text-sm ${result.success ? 'bg-green-50 text-green-600 dark:bg-green-900/20' : 'bg-red-50 text-red-600 dark:bg-red-900/20'}`}>
+              <div className={`rounded-xl px-4 py-3 text-sm font-medium ${result.success ? 'bg-green-50 text-green-600 dark:bg-green-900/20' : 'bg-red-50 text-red-600 dark:bg-red-900/20'}`}>
                 {result.message}
               </div>
             )}
-
-            {/* Manual token entry fallback */}
-            <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-700">
-              <p className="mb-2 text-xs text-slate-400">Or enter QR token manually:</p>
-              <div className="flex gap-2">
-                <input
-                  value={manualToken}
-                  onChange={(e) => setManualToken(e.target.value)}
-                  placeholder="Paste QR token here"
-                  className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
-                />
-                <button
-                  onClick={handleManualSubmit}
-                  disabled={!manualToken.trim()}
-                  className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
-                >
-                  Submit
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}

@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
+import { FiEye, FiEyeOff } from 'react-icons/fi';
 import AuthLayout from '../../auth/AuthLayout';
 import { adminLogin } from '../../services/authService';
 
 const AdminLogin = () => {
   const { register, handleSubmit, formState: { errors } } = useForm();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const navigate = useNavigate();
 
@@ -47,12 +49,21 @@ const AdminLogin = () => {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-          <input 
-            type="password"
-            {...register('password', { required: 'Password is required' })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-authPrimary focus:border-transparent outline-none transition-all bg-white/50"
-            placeholder="Enter your password"
-          />
+          <div className="relative">
+            <input 
+              type={showPassword ? 'text' : 'password'}
+              {...register('password', { required: 'Password is required' })}
+              className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-xl focus:ring-2 focus:ring-authPrimary focus:border-transparent outline-none transition-all bg-white/50"
+              placeholder="Enter your password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+            >
+              {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+            </button>
+          </div>
           {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
         </div>
 

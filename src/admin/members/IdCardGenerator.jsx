@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiArrowLeft, FiDownload, FiPrinter, FiRotateCcw, FiFileText, FiImage, FiCheckCircle, FiShield } from 'react-icons/fi';
 import { QRCodeCanvas } from 'qrcode.react';
+import { getPhotoUrl } from '../../utils/image';
 import { toPng } from 'html-to-image';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../utils/api';
@@ -70,7 +71,7 @@ export default function IdCardGenerator() {
   }
 
   const qrValue = JSON.stringify({ id: cardData._id, memberId: cardData.memberId });
-  const photoSrc = cardData.photo || `https://ui-avatars.com/api/?background=FFF0E6&color=FF6B00&name=${encodeURIComponent(cardData.fullName)}&size=128`;
+  const photoSrc = getPhotoUrl(cardData.photo, cardData.fullName);
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 p-4 md:p-6">

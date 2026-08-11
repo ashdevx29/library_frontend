@@ -5,48 +5,43 @@ import { verifyOtp, resendOtp } from '../../services/authService';
 import useAuthStore from '../../store/authStore';
 
 const VerifyOtp = () => {
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [timer, setTimer] = useState(300); // 5 minutes
-  const [canResend, setCanResend] = useState(false);
-
   const location = useLocation();
   const navigate = useNavigate();
-  const login = useAuthStore((state) => state.login);
+  const { login } = useAuthStore();
 
   const userId = location.state?.userId;
   const identifier = location.state?.identifier;
 
+  const [otp, setOtp] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [timer, setTimer] = useState(300);
+  const [canResend, setCanResend] = useState(false);
+
   useEffect(() => {
     if (!userId) {
-      navigate('/admin/login');
+      navigate('/admin/login', { replace: true });
     }
   }, [userId, navigate]);
 
   useEffect(() => {
-    let interval;
+    let interval = null;
     if (timer > 0) {
-      interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
+      interval = setInterval(() => {
+        setTimer((prev) => prev - 1);
+      }, 1000);
     } else {
       setCanResend(true);
     }
-    return () => clearInterval(interval);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [timer]);
-
-  const handleChange = (element, index) => {
-    if (isNaN(element.value)) return false;
-    setOtp([...otp.map((d, idx) => (idx === index ? element.value : d))]);
-
-    if (element.nextSibling) {
-      element.nextSibling.focus();
-    }
-  };
 
   const handleVerify = async (e) => {
     e.preventDefault();
-    const otpValue = otp.join('');
-    if (otpValue.length < 6) {
+    const cleanOtp = otp.trim();
+    if (cleanOtp.length < 6) {
       setErrorMsg('Please enter a 6-digit OTP');
       return;
     }
@@ -54,10 +49,10 @@ const VerifyOtp = () => {
     setLoading(true);
     setErrorMsg('');
     try {
-      const res = await verifyOtp(userId, otpValue);
+      const res = await verifyOtp(userId, cleanOtp);
       if (res.success) {
         login(res.data, res.data.accessToken);
-        navigate('/admin/dashboard');
+        navigate('/admin/dashboard', { replace: true });
       }
     } catch (err) {
       setErrorMsg(err.response?.data?.message || 'Invalid OTP');
@@ -67,7 +62,7 @@ const VerifyOtp = () => {
   };
 
   const handleResend = async () => {
-    if (!canResend) return;
+    if (!canResend || !userId) return;
     try {
       setErrorMsg('');
       await resendOtp(userId);
@@ -92,20 +87,18 @@ const VerifyOtp = () => {
         </div>
       )}
 
-      <form onSubmit={handleVerify} className="space-y-6 flex flex-col items-center">
-        <div className="flex justify-center space-x-2">
-          {otp.map((data, index) => (
-            <input
-              key={index}
-              type="text"
-              name="otp"
-              maxLength="1"
-              className="w-12 h-12 text-center text-xl font-bold border border-gray-300 rounded-xl focus:ring-2 focus:ring-authPrimary focus:border-transparent outline-none bg-white/50"
-              value={data}
-              onChange={(e) => handleChange(e.target, index)}
-              onFocus={(e) => e.target.select()}
-            />
-          ))}
+      <form onSubmit={handleVerify} className="space-y-6 flex flex-col items-center w-full">
+        <div className="w-full">
+          <input
+            type="text"
+            name="otp"
+            maxLength="6"
+            placeholder="Enter 6-digit OTP"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+            className="w-full text-center text-2xl font-bold tracking-widest py-3 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-authPrimary focus:border-transparent outline-none bg-white/50"
+            autoFocus
+          />
         </div>
 
         <button 

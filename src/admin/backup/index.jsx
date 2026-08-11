@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { getBackups, createBackup, restoreBackup, deleteBackup } from '../../services/backupService.js';
 import { FiDatabase, FiDownload, FiUpload, FiTrash2, FiRefreshCw, FiClock, FiAlertTriangle } from 'react-icons/fi';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 
 export default function BackupPage() {
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [restoring, setRestoring] = useState(null);
+  const [confirmCreate, setConfirmCreate] = useState(false);
+  const [confirmRestore, setConfirmRestore] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -16,23 +21,31 @@ export default function BackupPage() {
 
   useEffect(() => { load(); }, []);
 
-  const handleCreate = async () => {
-    if (!confirm('Create a database backup now?')) return;
+  const handleCreate = () => setConfirmCreate(true);
+
+  const doCreate = async () => {
+    setConfirmCreate(false);
     setCreating(true);
-    try { await createBackup(); await load(); } catch (e) { alert(e.message); }
+    try { await createBackup(); await load(); toast.success('Backup created successfully!'); } catch (e) { toast.error(e.message || 'Failed to create backup'); }
     setCreating(false);
   };
 
-  const handleRestore = async (filename) => {
-    if (!confirm(`Restore backup "${filename}"? This will OVERWRITE current data!`)) return;
+  const handleRestore = (filename) => setConfirmRestore(filename);
+
+  const doRestore = async () => {
+    const filename = confirmRestore;
+    setConfirmRestore(null);
     setRestoring(filename);
-    try { await restoreBackup(filename); alert('Backup restored successfully!'); } catch (e) { alert(e.message); }
+    try { await restoreBackup(filename); toast.success('Backup restored successfully!'); } catch (e) { toast.error(e.message || 'Restore failed'); }
     setRestoring(null);
   };
 
-  const handleDelete = async (filename) => {
-    if (!confirm(`Delete backup "${filename}"?`)) return;
-    try { await deleteBackup(filename); await load(); } catch (e) { alert(e.message); }
+  const handleDelete = (filename) => setConfirmDelete(filename);
+
+  const doDelete = async () => {
+    const filename = confirmDelete;
+    setConfirmDelete(null);
+    try { await deleteBackup(filename); await load(); toast.success('Backup deleted'); } catch (e) { toast.error(e.message || 'Delete failed'); }
   };
 
   const formatSize = (bytes) => {
@@ -98,6 +111,33 @@ export default function BackupPage() {
           ))}
         </div>
       )}
+      <ConfirmDialog
+        isOpen={confirmCreate}
+        onClose={() => setConfirmCreate(false)}
+        onConfirm={doCreate}
+        title="Create Backup"
+        message="Create a full database backup now?"
+        confirmText="Create Backup"
+        variant="success"
+      />
+      <ConfirmDialog
+        isOpen={!!confirmRestore}
+        onClose={() => setConfirmRestore(null)}
+        onConfirm={doRestore}
+        title="Restore Backup"
+        message={`Restore "${confirmRestore}"? ⚠️ This will OVERWRITE all current data and cannot be undone!`}
+        confirmText="Yes, Restore"
+        variant="warning"
+      />
+      <ConfirmDialog
+        isOpen={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        onConfirm={doDelete}
+        title="Delete Backup"
+        message={`Are you sure you want to delete "${confirmDelete}"?`}
+        confirmText="Delete Backup"
+        variant="danger"
+      />
     </div>
   );
 }
