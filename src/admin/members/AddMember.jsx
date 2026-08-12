@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
-import { FiArrowLeft, FiSave, FiUser } from 'react-icons/fi';
+import { FiArrowLeft, FiSave, FiUser, FiEye, FiEyeOff } from 'react-icons/fi';
 import { memberSchema } from '../../validations/member';
 import { useCreateMember, useShifts, useSeats } from '../../hooks/useApi';
 import { PLAN_TYPES } from '../../constants';
@@ -11,6 +11,8 @@ import { PageHeader, FormField, inputClass, btnPrimary, btnSecondary } from '../
 
 export default function AddMember() {
   const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { data: shifts = [] } = useShifts();
   const { data: seatsData } = useSeats({ status: 'Available' });
   const seats = seatsData?.seats || seatsData || [];
@@ -74,10 +76,40 @@ export default function AddMember() {
           <h3 className="mb-3 text-sm font-bold text-[var(--text-primary)]">Login Credentials</h3>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <FormField label="Password" error={errors.password?.message} required>
-              <input {...register('password')} type="password" className={inputClass} placeholder="Min 6 characters" />
+              <div className="relative">
+                <input
+                  {...register('password')}
+                  type={showPassword ? 'text' : 'password'}
+                  className={`${inputClass} pr-10`}
+                  placeholder="Min 6 characters"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <FiEyeOff size={16} /> : <FiEye size={16} />}
+                </button>
+              </div>
             </FormField>
             <FormField label="Confirm Password" error={errors.confirmPassword?.message}>
-              <input {...register('confirmPassword')} type="password" className={inputClass} placeholder="Repeat password" />
+              <div className="relative">
+                <input
+                  {...register('confirmPassword')}
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  className={`${inputClass} pr-10`}
+                  placeholder="Repeat password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+                  tabIndex={-1}
+                >
+                  {showConfirmPassword ? <FiEyeOff size={16} /> : <FiEye size={16} />}
+                </button>
+              </div>
             </FormField>
           </div>
         </div>

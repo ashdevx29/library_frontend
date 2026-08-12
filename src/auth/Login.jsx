@@ -28,7 +28,7 @@ const Login = () => {
       if (res.data.role === 'Super Admin' || res.data.role === 'Branch Admin') {
         navigate('/admin/dashboard');
       } else {
-        navigate('/user/dashboard');
+        navigate('/student/dashboard');
       }
     } catch (err) {
       setErrorMsg(err.response?.data?.message || 'Login failed. Please try again.');

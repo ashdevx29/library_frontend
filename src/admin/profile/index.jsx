@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { getProfile, updateProfile, changePassword, uploadProfileImage } from '../../services/profileService';
 import useAuthStore from '../../store/authStore';
-import { FiUser, FiMail, FiPhone, FiLock, FiCheck, FiCamera } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone, FiLock, FiCheck, FiCamera, FiEye, FiEyeOff } from 'react-icons/fi';
 import { getPhotoUrl } from '../../utils/image';
 
 const AdminProfilePage = () => {
@@ -13,6 +13,10 @@ const AdminProfilePage = () => {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [form, setForm] = useState({ name: '', email: '', mobile: '' });
   const [pwdForm, setPwdForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -30,10 +34,11 @@ const AdminProfilePage = () => {
     if (!file) return;
     setSaving(true); setError(''); setSuccess('');
     try {
-      const { profileImage } = await uploadProfileImage(file);
-      const updated = { ...profile, profileImage };
+      const res = await uploadProfileImage(file);
+      const newImg = res.profileImage || res.photo || res.user?.profileImage;
+      const updated = { ...profile, profileImage: newImg };
       setProfile(updated);
-      login({ ...storeUser, profileImage }, localStorage.getItem('accessToken'));
+      login({ ...storeUser, profileImage: newImg }, localStorage.getItem('accessToken'));
       setSuccess('Photo updated successfully');
     } catch (e) { setError(e.response?.data?.message || 'Upload failed'); }
     finally { setSaving(false); }
@@ -132,21 +137,24 @@ const AdminProfilePage = () => {
             <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Current Password</label>
             <div className="relative">
               <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input type="password" value={pwdForm.currentPassword} onChange={e => setPwdForm({ ...pwdForm, currentPassword: e.target.value })} required className={`${field} pl-10`} />
+              <input type={showCurrentPassword ? 'text' : 'password'} value={pwdForm.currentPassword} onChange={e => setPwdForm({ ...pwdForm, currentPassword: e.target.value })} required className={`${field} pl-10 pr-10`} />
+              <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"><>{showCurrentPassword ? <FiEyeOff /> : <FiEye />}</></button>
             </div>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">New Password</label>
             <div className="relative">
               <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input type="password" value={pwdForm.newPassword} onChange={e => setPwdForm({ ...pwdForm, newPassword: e.target.value })} required minLength={8} className={`${field} pl-10`} />
+              <input type={showNewPassword ? 'text' : 'password'} value={pwdForm.newPassword} onChange={e => setPwdForm({ ...pwdForm, newPassword: e.target.value })} required minLength={8} className={`${field} pl-10 pr-10`} />
+              <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"><>{showNewPassword ? <FiEyeOff /> : <FiEye />}</></button>
             </div>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Confirm New Password</label>
             <div className="relative">
               <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input type="password" value={pwdForm.confirmPassword} onChange={e => setPwdForm({ ...pwdForm, confirmPassword: e.target.value })} required minLength={8} className={`${field} pl-10`} />
+              <input type={showConfirmPassword ? 'text' : 'password'} value={pwdForm.confirmPassword} onChange={e => setPwdForm({ ...pwdForm, confirmPassword: e.target.value })} required minLength={8} className={`${field} pl-10 pr-10`} />
+              <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"><>{showConfirmPassword ? <FiEyeOff /> : <FiEye />}</></button>
             </div>
           </div>
           <button type="submit" disabled={saving} className="rounded-xl bg-red-500 px-6 py-2.5 font-semibold text-white hover:bg-red-600 disabled:opacity-60">{saving ? 'Changing...' : 'Change Password'}</button>

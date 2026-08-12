@@ -17,9 +17,11 @@ const api = async (path, opts = {}) => {
 export const adminReportService = {
   attendanceDaily: async (date, shiftId) => api(`/attendance/daily?${q({ date, shiftId })}`),
   attendanceMonthly: async (month, year, shiftId) => api(`/attendance/monthly?${q({ month, year, shiftId })}`),
-  attendanceYearly: async (year, shiftId) => api(`/attendance/yearly?${q({ year, shiftId })}`),
+  attendanceYearly: async (year, month, shiftId) => api(`/attendance/yearly?${q({ year, month, shiftId })}`),
+  attendanceMemberDetails: async (memberId, month, year) => api(`/attendance/member-details?${q({ memberId, month, year })}`),
   feesDaily: async date => api(`/fees/daily?${q({ date })}`),
   feesMonthly: async (month, year) => api(`/fees/monthly?${q({ month, year })}`),
+  feesYearly: async year => api(`/fees/yearly?${q({ year })}`),
   feesPending: async () => api('/fees/pending'),
   membershipOverview: async () => api('/membership'),
   seatOverview: async () => api('/seats'),

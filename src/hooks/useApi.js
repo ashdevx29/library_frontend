@@ -23,6 +23,9 @@ export const useRenewMember = () => {
   const qc = useQueryClient();
   return useMutation({ mutationFn: ({ id, data }) => api.post(`/members/${id}/renew`, data), onSuccess: () => { qc.invalidateQueries({ queryKey: ['members'] }); toast.success('Membership renewed'); }, onError: (e) => toast.error(e.response?.data?.message || 'Failed') });
 };
+export const useMemberAttendance = (id) => useQuery({ queryKey: ['member-attendance', id], queryFn: () => fetcher(`/members/${id}/attendance`), enabled: !!id });
+export const useMemberPayments = (id) => useQuery({ queryKey: ['member-payments', id], queryFn: () => fetcher(`/members/${id}/payments`), enabled: !!id });
+export const useMembershipHistory = (id) => useQuery({ queryKey: ['membership-history', id], queryFn: () => fetcher(`/members/${id}/history`), enabled: !!id });
 
 // ─── Shifts ───
 export const useShifts = () => useQuery({ queryKey: ['shifts'], queryFn: () => fetcher('/shifts') });

@@ -37,11 +37,13 @@ const UserProfilePage = () => {
     if (!file) return;
     setSaving(true); setError(''); setSuccess('');
     try {
-      const { profileImage } = await uploadProfileImage(file);
-      const updated = { ...profile, profileImage };
-      setProfile(updated);
-      login({ ...storeUser, profileImage }, localStorage.getItem('accessToken'));
-      setSuccess('Photo updated');
+      const res = await uploadProfileImage(file);
+      const newImg = res.profileImage || res.photo || res.user?.profileImage;
+      const updatedUser = { ...profile, profileImage: newImg };
+      setProfile(updatedUser);
+      if (member) setMember(m => ({ ...m, photo: newImg }));
+      login({ ...storeUser, profileImage: newImg }, localStorage.getItem('accessToken'));
+      setSuccess('Photo updated successfully');
     } catch (e) { setError(e.response?.data?.message || 'Upload failed'); }
     finally { setSaving(false); }
   };

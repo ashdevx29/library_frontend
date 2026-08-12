@@ -20,7 +20,7 @@ export const getAttendanceStatus = async () => {
   return data.data;
 };
 
-export const getAttendanceHistory = async (month, year) => {
-  const { data } = await api.get('/attendance/history', { params: { month, year } });
+export const getAttendanceHistory = async (month, year, page = 1, limit = 10) => {
+  const { data } = await api.get('/attendance/history', { params: { month, year, page, limit } });
   return data.data;
 };

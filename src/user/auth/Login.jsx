@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
+import { FiEye, FiEyeOff } from 'react-icons/fi';
 import AuthLayout from '../../auth/AuthLayout';
 import { userLogin } from '../../services/authService';
 import useAuthStore from '../../store/authStore';
@@ -9,6 +10,7 @@ const UserLogin = () => {
   const { register, handleSubmit, formState: { errors } } = useForm();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
 
@@ -19,7 +21,7 @@ const UserLogin = () => {
       const res = await userLogin(data.identifier, data.password);
       if (res.success) {
         login(res.data, res.data.accessToken);
-        navigate('/student');
+        navigate('/student/dashboard');
       }
     } catch (err) {
       setErrorMsg(err.response?.data?.message || 'Login failed. Please try again.');
@@ -49,12 +51,22 @@ const UserLogin = () => {
 
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Password</label>
-          <input
-            type="password"
-            {...register('password', { required: 'Password is required' })}
-            className="w-full rounded-xl border border-gray-300 bg-white/50 px-4 py-2 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-orange-400"
-            placeholder="Enter your password"
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              {...register('password', { required: 'Password is required' })}
+              className="w-full rounded-xl border border-gray-300 bg-white/50 px-4 py-2 pr-10 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-orange-400"
+              placeholder="Enter your password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+              tabIndex={-1}
+            >
+              {showPassword ? <FiEyeOff size={16} /> : <FiEye size={16} />}
+            </button>
+          </div>
           {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>}
         </div>
 

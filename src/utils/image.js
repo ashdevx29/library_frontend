@@ -23,5 +23,9 @@ export const getPhotoUrl = (path, name = 'User') => {
     return `${API_BASE}${cleanPath}`;
   }
 
+  if (cleanPath.startsWith('uploads/')) {
+    return `${API_BASE}/${cleanPath}`;
+  }
+
   return `${API_BASE}/${cleanPath.replace(/^\/+/, '')}`;
 };

@@ -36,6 +36,15 @@ export const daysLeft = (date) => {
   return Math.max(Math.ceil((new Date(date) - new Date()) / 86400000), 0);
 };
 
+export const calculateRemainingDays = (expiryDate) => {
+  if (!expiryDate) return 0;
+  const exp = new Date(expiryDate);
+  exp.setHours(23, 59, 59, 999);
+  const now = new Date();
+  const diffMs = exp.getTime() - now.getTime();
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+};
+
 export const getInitials = (name) => {
   if (!name) return '?';
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);

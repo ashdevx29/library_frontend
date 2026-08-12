@@ -1,10 +1,43 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { getPayments, getPaymentStats, getPendingDues, createPayment, markPaid, markFailed, downloadReceipt, downloadInvoice, getMembers, getPendingRenewals, getAllRenewals, approveRenewal, rejectRenewal, getExpiredMembers, getPlanStats } from '../../services/paymentService';
-import { FiDollarSign, FiCalendar, FiCheckCircle, FiXCircle, FiClock, FiUser, FiFilter, FiCheck, FiX, FiPlus, FiDownload, FiFileText, FiAlertTriangle, FiRefreshCw } from 'react-icons/fi';
+import { FiDollarSign, FiCalendar, FiCheckCircle, FiXCircle, FiClock, FiUser, FiFilter, FiCheck, FiX, FiPlus, FiDownload, FiFileText, FiAlertTriangle, FiRefreshCw, FiSearch } from 'react-icons/fi';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import { exportToCSV, exportToPDF } from '../../utils/exportHelpers';
 
 const TABS = ['Dashboard', 'Payments', 'Add Payment', 'Pending Dues', 'Renewals', 'Expired Members'];
+const PLAN_PRICES = { Monthly: 500, Quarterly: 1200, HalfYearly: 2000, 'Half-Yearly': 2000, Yearly: 3500 };
+
+const formatBillingPeriod = (item, defaultPlan = 'Monthly') => {
+  if (item?.billingPeriod && item.billingPeriod !== '—') return item.billingPeriod;
+  if (item?.fromMonth && item?.toMonth) {
+    return item.fromMonth === item.toMonth ? item.fromMonth : `${item.fromMonth} - ${item.toMonth}`;
+  }
+
+  const startDate = item?.startDate ? new Date(item.startDate) : item?.paymentDate ? new Date(item.paymentDate) : item?.requestedAt ? new Date(item.requestedAt) : item?.createdAt ? new Date(item.createdAt) : new Date();
+  let endDate = item?.endDate ? new Date(item.endDate) : null;
+
+  if (!endDate) {
+    const planType = (item?.type || item?.planType || item?.membershipId?.planType || defaultPlan || '').toLowerCase();
+    let monthsToAdd = 1;
+    if (planType.includes('quarter') || planType.includes('3 month')) monthsToAdd = 3;
+    else if (planType.includes('half') || planType.includes('6 month')) monthsToAdd = 6;
+    else if (planType.includes('year') || planType.includes('12 month')) monthsToAdd = 12;
+
+    endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + monthsToAdd);
+  }
+
+  const startMonthStr = startDate.toLocaleDateString('en-IN', { month: 'short' });
+  const startYear = startDate.getFullYear();
+  const endMonthStr = endDate.toLocaleDateString('en-IN', { month: 'short' });
+  const endYear = endDate.getFullYear();
+
+  if (startYear === endYear) {
+    return `${startMonthStr} - ${endMonthStr} ${startYear}`;
+  }
+  return `${startMonthStr} ${startYear} - ${endMonthStr} ${endYear}`;
+};
 
 const AdminFeesPage = () => {
   const [tab, setTab] = useState('Dashboard');
@@ -22,12 +55,97 @@ const AdminFeesPage = () => {
   const [rejectNote, setRejectNote] = useState('');
   const [confirmMarkFailedId, setConfirmMarkFailedId] = useState(null);
   const [confirmApproveId, setConfirmApproveId] = useState(null);
+
+  // Payments Tab Filters & Pagination State
   const [paymentsPage, setPaymentsPage] = useState(1);
-  const [addForm, setAddForm] = useState({ memberId: '', amount: '', discount: '', paymentMethod: 'Cash', paymentDate: new Date().toISOString().split('T')[0], transactionId: '', status: 'Paid' });
-  const [addLoading, setAddLoading] = useState(false);
-  const [addResult, setAddResult] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterMethod, setFilterMethod] = useState('');
+
+  // Add Payment Form State
+  const [addForm, setAddForm] = useState({
+    memberId: '',
+    planType: 'Monthly',
+    billingPeriod: '',
+    fromMonth: '',
+    toMonth: '',
+    amount: '500',
+    discount: '',
+    paymentMethod: 'Cash',
+    paymentDate: new Date().toISOString().split('T')[0],
+    transactionId: '',
+    status: 'Paid'
+  });
+  const [addLoading, setAddLoading] = useState(false);
+  const [addResult, setAddResult] = useState(null);
+
+  // Month options generator for Add Payment form
+  const monthOptions = useMemo(() => {
+    const now = new Date();
+    const currentMonthIdx = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const getMonthStr = (offset) => {
+      const d = new Date(currentYear, currentMonthIdx + offset, 1);
+      return {
+        short: d.toLocaleDateString('en-IN', { month: 'short' }),
+        year: d.getFullYear()
+      };
+    };
+
+    const single = [];
+    for (let i = -1; i <= 6; i++) {
+      const m1 = getMonthStr(i);
+      const m2 = getMonthStr(i + 1);
+      const yearStr = m1.year === m2.year ? m1.year : `${m1.year}-${m2.year}`;
+      single.push(`${m1.short} - ${m2.short} ${yearStr}`);
+    }
+
+    const threeFrom = [];
+    const threeTo = [];
+    for (let i = -2; i <= 4; i++) {
+      const mStart = getMonthStr(i);
+      const mEnd = getMonthStr(i + 2);
+      const yStr = mStart.year === mEnd.year ? mStart.year : `${mStart.year}-${mEnd.year}`;
+      threeFrom.push(`${mStart.short} - ${mEnd.short} ${yStr}`);
+    }
+    for (let i = 1; i <= 7; i++) {
+      const mStart = getMonthStr(i);
+      const mEnd = getMonthStr(i + 2);
+      const yStr = mStart.year === mEnd.year ? mStart.year : `${mStart.year}-${mEnd.year}`;
+      threeTo.push(`${mStart.short} - ${mEnd.short} ${yStr}`);
+    }
+
+    const sixFrom = [];
+    const sixTo = [];
+    for (let i = 0; i <= 5; i++) {
+      const mStart = getMonthStr(i);
+      const mEnd = getMonthStr(i + 5);
+      sixFrom.push(`${mStart.short} ${mStart.year} - ${mEnd.short} ${mEnd.year}`);
+    }
+    for (let i = 6; i <= 11; i++) {
+      const mStart = getMonthStr(i);
+      const mEnd = getMonthStr(i + 5);
+      sixTo.push(`${mStart.short} ${mStart.year} - ${mEnd.short} ${mEnd.year}`);
+    }
+
+    const twelveFrom = [];
+    const twelveTo = [];
+    for (let i = 0; i <= 3; i++) {
+      const mStart = getMonthStr(i);
+      const mEnd = getMonthStr(i + 11);
+      twelveFrom.push(`${mStart.short} ${mStart.year} - ${mEnd.short} ${mEnd.year}`);
+    }
+    for (let i = 12; i <= 15; i++) {
+      const mStart = getMonthStr(i);
+      const mEnd = getMonthStr(i + 11);
+      twelveTo.push(`${mStart.short} ${mStart.year} - ${mEnd.short} ${mEnd.year}`);
+    }
+
+    return { single, threeFrom, threeTo, sixFrom, sixTo, twelveFrom, twelveTo };
+  }, []);
 
   useEffect(() => { loadData(); }, []);
 
@@ -37,6 +155,36 @@ const AdminFeesPage = () => {
     if (tab === 'Payments') loadPayments();
     if (tab === 'Expired Members') loadExpired();
   }, [tab, renewalFilter, expiredFilter, filterStatus, filterMethod]);
+
+  // Handle plan selection in Add Payment form
+  const handlePlanChange = (plan) => {
+    let defaultAmount = PLAN_PRICES[plan] || 500;
+    let bPeriod = '';
+    let fMonth = '';
+    let tMonth = '';
+
+    if (plan === 'Monthly') {
+      bPeriod = monthOptions.single[1] || monthOptions.single[0];
+    } else if (plan === 'Quarterly') {
+      fMonth = monthOptions.threeFrom[0];
+      tMonth = monthOptions.threeTo[0];
+    } else if (plan === 'HalfYearly' || plan === 'Half-Yearly') {
+      fMonth = monthOptions.sixFrom[0];
+      tMonth = monthOptions.sixTo[0];
+    } else if (plan === 'Yearly') {
+      fMonth = monthOptions.twelveFrom[0];
+      tMonth = monthOptions.twelveTo[0];
+    }
+
+    setAddForm(prev => ({
+      ...prev,
+      planType: plan,
+      amount: String(defaultAmount),
+      billingPeriod: bPeriod,
+      fromMonth: fMonth,
+      toMonth: tMonth
+    }));
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -63,10 +211,32 @@ const AdminFeesPage = () => {
   const handleAddPayment = async (e) => {
     e.preventDefault();
     setAddLoading(true); setAddResult(null);
+
+    let finalBillingPeriod = addForm.billingPeriod;
+    if (addForm.planType !== 'Monthly' && addForm.fromMonth && addForm.toMonth) {
+      finalBillingPeriod = `${addForm.fromMonth} to ${addForm.toMonth}`;
+    }
+
     try {
-      await createPayment({ ...addForm, amount: Number(addForm.amount) });
+      await createPayment({
+        ...addForm,
+        amount: Number(addForm.amount),
+        billingPeriod: finalBillingPeriod
+      });
       setAddResult({ success: true, message: 'Payment recorded successfully' });
-      setAddForm({ memberId: '', amount: '', paymentMethod: 'Cash', paymentDate: new Date().toISOString().split('T')[0], transactionId: '', status: 'Paid' });
+      setAddForm({
+        memberId: '',
+        planType: 'Monthly',
+        billingPeriod: '',
+        fromMonth: '',
+        toMonth: '',
+        amount: '500',
+        discount: '',
+        paymentMethod: 'Cash',
+        paymentDate: new Date().toISOString().split('T')[0],
+        transactionId: '',
+        status: 'Paid'
+      });
       loadData();
     } catch (e) { setAddResult({ success: false, message: e.response?.data?.message || 'Failed' }); }
     finally { setAddLoading(false); }
@@ -84,7 +254,22 @@ const AdminFeesPage = () => {
     try { await approveRenewal(confirmApproveId); loadRenewals(); loadData(); toast.success('Renewal approved'); } catch (e) { toast.error(e.response?.data?.message || 'Failed'); }
     setConfirmApproveId(null);
   };
-  const handleReject = async () => { if (!rejectModal) return; try { await rejectRenewal(rejectModal, rejectNote); setRejectModal(null); setRejectNote(''); loadRenewals(); toast.success('Renewal rejected'); } catch (e) { toast.error(e.response?.data?.message || 'Failed'); } };
+  const handleReject = async () => {
+    if (!rejectModal) return;
+    if (rejectNote.trim().length > 150) {
+      toast.error('Rejection reason cannot exceed 150 characters');
+      return;
+    }
+    try {
+      await rejectRenewal(rejectModal, rejectNote);
+      setRejectModal(null);
+      setRejectNote('');
+      loadRenewals();
+      toast.success('Renewal rejected');
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed');
+    }
+  };
 
   const handleDownload = async (id, type) => {
     try {
@@ -101,6 +286,81 @@ const AdminFeesPage = () => {
   const RENEW_BADGE = { Pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400', Approved: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', Rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' };
   const field = 'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white';
   const label = 'mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300';
+
+  // Process and Filter Payments dataset
+  const formattedPayments = useMemo(() => {
+    return payments.map(p => ({
+      ...p,
+      computedPeriod: formatBillingPeriod(p),
+      formattedDate: fmt(p.paymentDate || p.createdAt),
+      memberNameStr: p.studentName || p.memberId?.fullName || '—',
+    }));
+  }, [payments]);
+
+  const filteredPayments = useMemo(() => {
+    return formattedPayments.filter(item => {
+      const itemTime = new Date(item.paymentDate || item.createdAt).getTime();
+
+      if (startDate) {
+        const startTime = new Date(startDate).setHours(0, 0, 0, 0);
+        if (itemTime < startTime) return false;
+      }
+      if (endDate) {
+        const endTime = new Date(endDate).setHours(23, 59, 59, 999);
+        if (itemTime > endTime) return false;
+      }
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const memberStr = (item.memberNameStr || '').toLowerCase();
+        const planStr = (item.planType || item.membershipId?.planType || '').toLowerCase();
+        const methodStr = (item.paymentMethod || '').toLowerCase();
+        const statusStr = (item.status || '').toLowerCase();
+        const amountStr = String(item.amount || '');
+        const periodStr = (item.computedPeriod || '').toLowerCase();
+
+        return memberStr.includes(q) || planStr.includes(q) || methodStr.includes(q) || statusStr.includes(q) || amountStr.includes(q) || periodStr.includes(q);
+      }
+
+      return true;
+    });
+  }, [formattedPayments, searchQuery, startDate, endDate]);
+
+  useEffect(() => {
+    setPaymentsPage(1);
+  }, [searchQuery, startDate, endDate, filterStatus, filterMethod]);
+
+  const totalPaymentRows = filteredPayments.length;
+  const totalPaymentPages = Math.ceil(totalPaymentRows / 10) || 1;
+  const activePaymentsPage = Math.min(paymentsPage, totalPaymentPages);
+  const paginatedPayments = filteredPayments.slice((activePaymentsPage - 1) * 10, activePaymentsPage * 10);
+
+  // Export handlers for Payments table
+  const handleExportCSV = () => {
+    const columns = [
+      { header: 'Member', key: 'memberNameStr' },
+      { header: 'Date', key: 'formattedDate' },
+      { header: 'Month / Period', key: 'computedPeriod' },
+      { header: 'Plan / Type', key: 'planType' },
+      { header: 'Amount', key: 'amount' },
+      { header: 'Payment Method', key: 'paymentMethod' },
+      { header: 'Status', key: 'status' }
+    ];
+    exportToCSV('All_Payments_Report', columns, filteredPayments);
+  };
+
+  const handleExportPDF = () => {
+    const columns = [
+      { header: 'Member', key: 'memberNameStr' },
+      { header: 'Date', key: 'formattedDate' },
+      { header: 'Month / Period', key: 'computedPeriod' },
+      { header: 'Plan / Type', key: 'planType' },
+      { header: 'Amount', key: 'amount' },
+      { header: 'Payment Method', key: 'paymentMethod' },
+      { header: 'Status', key: 'status' }
+    ];
+    exportToPDF('Payments & Fee Submissions Report', columns, filteredPayments);
+  };
 
   if (loading) return <div className="py-16 text-center text-slate-400">Loading...</div>;
 
@@ -195,32 +455,117 @@ const AdminFeesPage = () => {
 
       {/* Payments */}
       {tab === 'Payments' && (
-        <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-slate-800">
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <FiFilter className="text-slate-400" />
-            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className={field + ' w-auto'}><option value="">All Status</option>{['Paid', 'Pending', 'Failed'].map(s => <option key={s}>{s}</option>)}</select>
-            <select value={filterMethod} onChange={e => setFilterMethod(e.target.value)} className={field + ' w-auto'}><option value="">All Methods</option>{['Cash', 'UPI', 'Bank Transfer'].map(m => <option key={m}>{m}</option>)}</select>
+        <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-slate-800 space-y-4">
+          {/* Header Actions & Export Buttons */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 dark:border-slate-700 pb-3">
+            <div>
+              <h2 className="text-lg font-bold text-slate-800 dark:text-white">All Payments & Submissions</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Complete record of every fee payment and plan renewal</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleExportCSV}
+                className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+              >
+                <FiFileText size={14} className="text-blue-500" /> Export CSV
+              </button>
+              <button
+                onClick={handleExportPDF}
+                className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+              >
+                <FiDownload size={14} className="text-red-500" /> Export PDF
+              </button>
+            </div>
           </div>
-          {!payments.length ? <p className="py-8 text-center text-slate-400">No payments</p> : (
+
+          {/* Filter Controls Bar */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <FiFilter className="text-slate-400 text-sm shrink-0" />
+            <select
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 shrink-0 min-w-[110px]"
+            >
+              <option value="">All Status</option>
+              {['Paid', 'Pending', 'Failed'].map(s => <option key={s}>{s}</option>)}
+            </select>
+            <select
+              value={filterMethod}
+              onChange={e => setFilterMethod(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 shrink-0 min-w-[120px]"
+            >
+              <option value="">All Methods</option>
+              {['Cash', 'UPI', 'Bank Transfer'].map(m => <option key={m}>{m}</option>)}
+            </select>
+
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[180px]">
+              <FiSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search member, plan, method, status, amount..."
+                className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 py-2 text-xs outline-none focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              />
+            </div>
+
+            {/* Date to Date Picker */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <input
+                type="date"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-xs outline-none focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              />
+              <span className="text-xs text-slate-400">to</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-xs outline-none focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              />
+              {(startDate || endDate || searchQuery || filterStatus || filterMethod) && (
+                <button
+                  onClick={() => { setStartDate(''); setEndDate(''); setSearchQuery(''); setFilterStatus(''); setFilterMethod(''); }}
+                  className="flex items-center gap-1 rounded-xl bg-slate-100 dark:bg-slate-700 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:opacity-80 cursor-pointer"
+                >
+                  <FiX size={13} /> Clear
+                </button>
+              )}
+            </div>
+          </div>
+
+          {!paginatedPayments.length ? <p className="py-8 text-center text-slate-400">No payment records found</p> : (
             <div className="space-y-3">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead><tr className="border-b border-slate-200 dark:border-slate-700">
-                    <th className="py-2 px-3 text-slate-500">Member</th><th className="py-2 px-3 text-slate-500">Plan</th><th className="py-2 px-3 text-slate-500">Amount</th><th className="py-2 px-3 text-slate-500">Method</th><th className="py-2 px-3 text-slate-500">Date</th><th className="py-2 px-3 text-slate-500">Status</th><th className="py-2 px-3 text-slate-500">Actions</th>
-                  </tr></thead>
-                  <tbody>
-                    {payments.slice((paymentsPage - 1) * 10, paymentsPage * 10).map(p => (
-                      <tr key={p._id} className="border-b border-slate-100 dark:border-slate-700/50">
-                        <td className="py-2.5 px-3 font-medium text-slate-800 dark:text-white">{p.memberId?.fullName || '—'}</td>
-                        <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">{p.membershipId?.planType || '—'}</td>
-                        <td className="py-2.5 px-3 font-bold text-slate-800 dark:text-white">{money(p.amount)}</td>
-                        <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">{p.paymentMethod}</td>
-                        <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">{fmt(p.paymentDate)}</td>
-                        <td className="py-2.5 px-3"><span className={`rounded-full px-2 py-0.5 text-xs font-bold ${BADGE[p.status]}`}>{p.status}</span></td>
-                        <td className="py-2.5 px-3">
-                          <div className="flex gap-1">
-                            <button onClick={() => handleDownload(p._id, 'receipt')} title="Receipt" className="rounded-lg bg-blue-50 p-1.5 text-blue-500 hover:bg-blue-100"><FiFileText size={14} /></button>
-                            <button onClick={() => handleDownload(p._id, 'invoice')} title="Invoice" className="rounded-lg bg-purple-50 p-1.5 text-purple-500 hover:bg-purple-100"><FiDownload size={14} /></button>
+              <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 dark:bg-slate-700/50 text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
+                    <tr>
+                      <th className="py-3 px-4">MEMBER</th>
+                      <th className="py-3 px-4">MONTH / PERIOD</th>
+                      <th className="py-3 px-4">PLAN / TYPE</th>
+                      <th className="py-3 px-4">AMOUNT</th>
+                      <th className="py-3 px-4">PAYMENT METHOD</th>
+                      <th className="py-3 px-4">DATE</th>
+                      <th className="py-3 px-4">STATUS</th>
+                      <th className="py-3 px-4 text-right">ACTIONS</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                    {paginatedPayments.map(p => (
+                      <tr key={p._id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                        <td className="py-3 px-4 font-semibold text-slate-800 dark:text-white whitespace-nowrap">{p.memberNameStr}</td>
+                        <td className="py-3 px-4 font-bold text-orange-600 dark:text-orange-400 whitespace-nowrap">{p.computedPeriod}</td>
+                        <td className="py-3 px-4 font-medium text-slate-700 dark:text-slate-300">{p.planType || 'Monthly'}</td>
+                        <td className="py-3 px-4 font-bold text-slate-800 dark:text-white">{money(p.amount)}</td>
+                        <td className="py-3 px-4 font-medium text-slate-600 dark:text-slate-400">{p.paymentMethod || 'Cash'}</td>
+                        <td className="py-3 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">{p.formattedDate}</td>
+                        <td className="py-3 px-4"><span className={`rounded-full px-2.5 py-0.5 text-[10px] font-extrabold ${BADGE[p.status]}`}>{p.status}</span></td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button onClick={() => handleDownload(p._id, 'receipt')} title="Receipt" className="rounded-lg bg-blue-50 p-1.5 text-blue-500 hover:bg-blue-100 dark:bg-blue-900/30 cursor-pointer"><FiFileText size={14} /></button>
+                            <button onClick={() => handleDownload(p._id, 'invoice')} title="Invoice" className="rounded-lg bg-purple-50 p-1.5 text-purple-500 hover:bg-purple-100 dark:bg-purple-900/30 cursor-pointer"><FiDownload size={14} /></button>
                           </div>
                         </td>
                       </tr>
@@ -229,26 +574,26 @@ const AdminFeesPage = () => {
                 </table>
               </div>
 
-              {payments.length > 10 && (
+              {totalPaymentRows > 0 && (
                 <div className="flex items-center justify-between border-t border-slate-200 pt-3 text-xs text-slate-500 dark:border-slate-700 flex-wrap gap-2">
                   <div>
-                    Showing <span className="font-semibold text-slate-800 dark:text-white">{(paymentsPage - 1) * 10 + 1}</span> to <span className="font-semibold text-slate-800 dark:text-white">{Math.min(paymentsPage * 10, payments.length)}</span> of <span className="font-semibold text-slate-800 dark:text-white">{payments.length}</span> entries
+                    Showing <span className="font-semibold text-slate-800 dark:text-white">{(activePaymentsPage - 1) * 10 + 1}</span> to <span className="font-semibold text-slate-800 dark:text-white">{Math.min(activePaymentsPage * 10, totalPaymentRows)}</span> of <span className="font-semibold text-slate-800 dark:text-white">{totalPaymentRows}</span> entries
                   </div>
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => setPaymentsPage(p => Math.max(1, p - 1))}
-                      disabled={paymentsPage === 1}
-                      className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:hover:bg-slate-700"
+                      disabled={activePaymentsPage === 1}
+                      className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:hover:bg-slate-700 cursor-pointer"
                     >
                       Previous
                     </button>
                     <span className="px-2 font-bold text-slate-800 dark:text-white">
-                      Page {paymentsPage} of {Math.ceil(payments.length / 10)}
+                      Page {activePaymentsPage} of {totalPaymentPages}
                     </span>
                     <button
-                      onClick={() => setPaymentsPage(p => Math.min(Math.ceil(payments.length / 10), p + 1))}
-                      disabled={paymentsPage >= Math.ceil(payments.length / 10)}
-                      className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:hover:bg-slate-700"
+                      onClick={() => setPaymentsPage(p => Math.min(totalPaymentPages, p + 1))}
+                      disabled={activePaymentsPage >= totalPaymentPages}
+                      className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:hover:bg-slate-700 cursor-pointer"
                     >
                       Next
                     </button>
@@ -262,9 +607,9 @@ const AdminFeesPage = () => {
 
       {/* Add Payment */}
       {tab === 'Add Payment' && (
-        <div className="mx-auto max-w-xl rounded-2xl bg-white p-6 shadow-sm dark:bg-slate-800">
-          <h2 className="mb-4 text-lg font-semibold text-slate-800 dark:text-white">Record Payment</h2>
-          {addResult && <div className={`mb-4 rounded-xl px-4 py-3 text-sm ${addResult.success ? 'bg-green-50 text-green-600 dark:bg-green-900/20' : 'bg-red-50 text-red-600 dark:bg-red-900/20'}`}>{addResult.message}</div>}
+        <div className="mx-auto max-w-xl rounded-2xl bg-white p-6 shadow-sm dark:bg-slate-800 space-y-4">
+          <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Record Payment</h2>
+          {addResult && <div className={`rounded-xl px-4 py-3 text-sm ${addResult.success ? 'bg-green-50 text-green-600 dark:bg-green-900/20' : 'bg-red-50 text-red-600 dark:bg-red-900/20'}`}>{addResult.message}</div>}
           <form onSubmit={handleAddPayment} className="space-y-4">
             <div><label className={label}>Member *</label>
               <select value={addForm.memberId} onChange={e => setAddForm({ ...addForm, memberId: e.target.value })} required className={field}>
@@ -272,6 +617,83 @@ const AdminFeesPage = () => {
                 {members.map(m => <option key={m._id} value={m._id}>{m.fullName} — {m.mobile}</option>)}
               </select>
             </div>
+
+            {/* Plan Type Selection */}
+            <div><label className={label}>Plan Type *</label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[
+                  { value: 'Monthly', label: '1 Month' },
+                  { value: 'Quarterly', label: '3 Months' },
+                  { value: 'HalfYearly', label: '6 Months' },
+                  { value: 'Yearly', label: '12 Months' }
+                ].map(p => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => handlePlanChange(p.value)}
+                    className={`rounded-xl border-2 p-2.5 text-xs font-bold transition-all ${addForm.planType === p.value ? 'border-orange-500 bg-orange-50 text-orange-600 dark:bg-orange-950/30 dark:text-orange-400' : 'border-slate-200 text-slate-600 hover:border-orange-300 dark:border-slate-700 dark:text-slate-300'}`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Billing Period Selection */}
+            {addForm.planType === 'Monthly' ? (
+              <div>
+                <label className={label}>Billing Month / Period *</label>
+                <select value={addForm.billingPeriod} onChange={e => setAddForm({ ...addForm, billingPeriod: e.target.value })} required className={field}>
+                  {monthOptions.single.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+            ) : addForm.planType === 'Quarterly' ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={label}>From Month / Period *</label>
+                  <select value={addForm.fromMonth} onChange={e => setAddForm({ ...addForm, fromMonth: e.target.value })} required className={field}>
+                    {monthOptions.threeFrom.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={label}>To Month / Period *</label>
+                  <select value={addForm.toMonth} onChange={e => setAddForm({ ...addForm, toMonth: e.target.value })} required className={field}>
+                    {monthOptions.threeTo.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+            ) : addForm.planType === 'HalfYearly' || addForm.planType === 'Half-Yearly' ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={label}>From Month / Period *</label>
+                  <select value={addForm.fromMonth} onChange={e => setAddForm({ ...addForm, fromMonth: e.target.value })} required className={field}>
+                    {monthOptions.sixFrom.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={label}>To Month / Period *</label>
+                  <select value={addForm.toMonth} onChange={e => setAddForm({ ...addForm, toMonth: e.target.value })} required className={field}>
+                    {monthOptions.sixTo.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={label}>From Month / Period *</label>
+                  <select value={addForm.fromMonth} onChange={e => setAddForm({ ...addForm, fromMonth: e.target.value })} required className={field}>
+                    {monthOptions.twelveFrom.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={label}>To Month / Period *</label>
+                  <select value={addForm.toMonth} onChange={e => setAddForm({ ...addForm, toMonth: e.target.value })} required className={field}>
+                    {monthOptions.twelveTo.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
+
             <div className="grid gap-4 sm:grid-cols-2">
               <div><label className={label}>Amount (₹) *</label>
                 <input type="number" value={addForm.amount} onChange={e => setAddForm({ ...addForm, amount: e.target.value })} required className={field} placeholder="Enter fee amount" />
@@ -298,7 +720,7 @@ const AdminFeesPage = () => {
             <div><label className={label}>Transaction ID (optional)</label>
               <input value={addForm.transactionId} onChange={e => setAddForm({ ...addForm, transactionId: e.target.value })} className={field} />
             </div>
-            <button type="submit" disabled={addLoading} className="rounded-xl bg-[var(--button)] px-6 py-2.5 font-semibold text-white disabled:opacity-60">{addLoading ? 'Saving...' : 'Record Payment'}</button>
+            <button type="submit" disabled={addLoading} className="rounded-xl bg-orange-500 px-6 py-2.5 font-semibold text-white hover:bg-orange-600 disabled:opacity-60 cursor-pointer">{addLoading ? 'Saving...' : 'Record Payment'}</button>
           </form>
         </div>
       )}
@@ -432,11 +854,30 @@ const AdminFeesPage = () => {
       {rejectModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setRejectModal(null)}>
           <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-slate-100" onClick={e => e.stopPropagation()}>
-            <h2 className="mb-4 text-lg font-bold text-slate-900 dark:text-white">Reject Renewal</h2>
-            <textarea value={rejectNote} onChange={e => setRejectNote(e.target.value)} placeholder="Reason (optional)" rows={3} className={field} />
+            <h2 className="mb-2 text-lg font-bold text-slate-900 dark:text-white">Reject Renewal</h2>
+            <p className="text-xs text-slate-500 mb-3">Provide a reason for rejecting this renewal (max 150 characters).</p>
+            <div>
+              <textarea
+                value={rejectNote}
+                onChange={e => setRejectNote(e.target.value.slice(0, 150))}
+                maxLength={150}
+                placeholder="Enter rejection reason..."
+                rows={3}
+                className={field}
+              />
+              <div className="mt-1 text-right text-[11px] text-slate-400 font-medium">
+                <span className={rejectNote.length >= 150 ? 'text-red-500 font-bold' : ''}>{rejectNote.length}</span>/150 characters
+              </div>
+            </div>
             <div className="mt-4 flex gap-3">
-              <button onClick={handleReject} className="rounded-xl bg-red-500 px-5 py-2.5 font-semibold text-white hover:bg-red-600">Reject</button>
-              <button onClick={() => setRejectModal(null)} className="rounded-xl border border-slate-200 px-5 py-2.5 dark:border-slate-700 dark:text-white">Cancel</button>
+              <button
+                onClick={handleReject}
+                disabled={rejectNote.length > 150}
+                className="rounded-xl bg-red-500 px-5 py-2.5 font-semibold text-white hover:bg-red-600 disabled:opacity-60 cursor-pointer"
+              >
+                Reject
+              </button>
+              <button onClick={() => setRejectModal(null)} className="rounded-xl border border-slate-200 px-5 py-2.5 dark:border-slate-700 dark:text-white cursor-pointer">Cancel</button>
             </div>
           </div>
         </div>

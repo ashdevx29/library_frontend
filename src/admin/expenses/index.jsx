@@ -18,7 +18,7 @@ const AdminExpensesPage = () => {
   const [filterMethod, setFilterMethod] = useState('');
 
   // Reports
-  const [reportTab, setReportTab] = useState('Daily');
+  const [reportTab, setReportTab] = useState('Today');
   const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportMonth, setReportMonth] = useState(String(new Date().getMonth() + 1));
   const [reportYear, setReportYear] = useState(String(new Date().getFullYear()));
@@ -89,11 +89,17 @@ const AdminExpensesPage = () => {
     setConfirmId(null);
   };
 
+  useEffect(() => {
+    if (tab === 'Reports') {
+      fetchReport();
+    }
+  }, [tab, reportTab, reportDate, reportMonth, reportYear]);
+
   const fetchReport = async () => {
     setReportLoading(true);
     try {
       let data;
-      if (reportTab === 'Daily') data = await getDailyReport(reportDate);
+      if (reportTab === 'Today' || reportTab === 'Daily') data = await getDailyReport(reportDate);
       else if (reportTab === 'Monthly') data = await getMonthlyReport(reportMonth, reportYear);
       else data = await getYearlyReport(reportYear);
       setReportData(data);
@@ -154,7 +160,7 @@ const AdminExpensesPage = () => {
                     <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center dark:bg-orange-900/30"><FiDollarSign className="text-orange-500" /></div>
                     <div>
                       <p className="font-medium text-slate-800 dark:text-white">{ex.title}</p>
-                      <p className="text-xs text-slate-400">{ex.category} · {fmt(ex.expenseDate)} · {ex.paymentMethod}</p>
+                      <p className="text-xs text-slate-400">{ex.category} · {fmt(ex.expenseDate)} · {ex.paymentMethod} {ex.description ? `· ${ex.description}` : ''}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -203,15 +209,15 @@ const AdminExpensesPage = () => {
       {tab === 'Reports' && (
         <div className="space-y-4">
           <div className="flex gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800 w-fit">
-            {['Daily', 'Monthly', 'Yearly'].map(t => (
+            {['Today', 'Monthly', 'Yearly'].map(t => (
               <button key={t} onClick={() => { setReportTab(t); setReportData(null); }} className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${reportTab === t ? 'bg-white text-orange-600 shadow dark:bg-slate-700 dark:text-orange-400' : 'text-slate-500'}`}>{t}</button>
             ))}
           </div>
 
           <div className="flex flex-wrap items-end gap-3 rounded-2xl bg-white p-5 shadow-sm dark:bg-slate-800">
-            {reportTab === 'Daily' && <div><label className={label}>Date</label><input type="date" value={reportDate} onChange={e => setReportDate(e.target.value)} className={field} /></div>}
+            {(reportTab === 'Today' || reportTab === 'Daily') && <div><label className={label}>Date</label><input type="date" value={reportDate} onChange={e => setReportDate(e.target.value)} className={field} /></div>}
             {reportTab === 'Monthly' && <>
-              <div><label className={label}>Month</label><select value={reportMonth} onChange={e => setReportMonth(e.target.value)} className={field}>{Array.from({ length: 12 }, (_, i) => <option key={i + 1} value={i + 1}>{new Date(0, i).toLocaleString('en', { month: 'long' })}</option>)}</select></div>
+              <div><label className={label}>Month</label><select value={reportMonth} onChange={e => setReportMonth(e.target.value)} className={field}>{Array.from({ length: 12 }, (_, i) => <option key={i + 1} value={i + 1}>{new Date(2024, i).toLocaleString('en', { month: 'long' })}</option>)}</select></div>
               <div><label className={label}>Year</label><input type="number" value={reportYear} onChange={e => setReportYear(e.target.value)} min="2020" max="2099" className={field} /></div>
             </>}
             {reportTab === 'Yearly' && <div><label className={label}>Year</label><input type="number" value={reportYear} onChange={e => setReportYear(e.target.value)} min="2020" max="2099" className={field} /></div>}
@@ -223,13 +229,13 @@ const AdminExpensesPage = () => {
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="rounded-2xl bg-red-50 p-5 text-center dark:bg-red-900/20"><p className="text-xs text-slate-500">Total Expenses</p><p className="text-2xl font-bold text-red-600">{money(reportData.total)}</p></div>
                 <div className="rounded-2xl bg-blue-50 p-5 text-center dark:bg-blue-900/20"><p className="text-xs text-slate-500">Total Entries</p><p className="text-2xl font-bold text-blue-600">{reportData.count}</p></div>
-                {reportTab === 'Daily' && <div className="rounded-2xl bg-green-50 p-5 text-center dark:bg-green-900/20"><p className="text-xs text-slate-500">Average</p><p className="text-2xl font-bold text-green-600">{reportData.count > 0 ? money(Math.round(reportData.total / reportData.count)) : '₹0'}</p></div>}
+                <div className="rounded-2xl bg-green-50 p-5 text-center dark:bg-green-900/20"><p className="text-xs text-slate-500">Average / Entry</p><p className="text-2xl font-bold text-green-600">{reportData.count > 0 ? money(Math.round(reportData.total / reportData.count)) : '₹0'}</p></div>
               </div>
 
               {reportTab === 'Monthly' && reportData.byCategory && Object.keys(reportData.byCategory).length > 0 && (
                 <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-slate-800">
-                  <h3 className="mb-3 font-semibold text-slate-800 dark:text-white">By Category</h3>
-                  <div className="grid gap-2 sm:grid-cols-2">
+                  <h3 className="mb-3 font-semibold text-slate-800 dark:text-white">Category Breakdown</h3>
+                  <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
                     {Object.entries(reportData.byCategory).sort(([, a], [, b]) => b - a).map(([cat, amt]) => (
                       <div key={cat} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-700/50">
                         <span className="text-sm text-slate-600 dark:text-slate-400">{cat}</span>
@@ -242,9 +248,9 @@ const AdminExpensesPage = () => {
 
               {reportTab === 'Yearly' && (
                 <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-slate-800">
-                  <h3 className="mb-3 font-semibold text-slate-800 dark:text-white">Monthly Breakdown</h3>
+                  <h3 className="mb-3 font-semibold text-slate-800 dark:text-white">Monthly Expense Summary ({reportYear})</h3>
                   <div className="grid gap-2 sm:grid-cols-3 md:grid-cols-4">
-                    {reportData.byMonth.map(m => (
+                    {reportData.byMonth?.map(m => (
                       <div key={m.month} className={`rounded-xl p-3 text-center ${m.total > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-slate-50 dark:bg-slate-700/50'}`}>
                         <p className="text-xs text-slate-500">{new Date(2024, m.month - 1).toLocaleString('en', { month: 'short' })}</p>
                         <p className={`text-lg font-bold ${m.total > 0 ? 'text-red-600' : 'text-slate-400'}`}>{money(m.total)}</p>
@@ -256,12 +262,15 @@ const AdminExpensesPage = () => {
               )}
 
               <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-slate-800">
-                <h3 className="mb-3 font-semibold text-slate-800 dark:text-white">Expense Records</h3>
-                {!reportData.expenses.length ? <p className="py-6 text-center text-slate-400">No expenses</p> : (
-                  <div className="max-h-80 overflow-y-auto space-y-2">
-                    {reportData.expenses.slice(0, 50).map(ex => (
-                      <div key={ex._id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-700/50">
-                        <div><p className="text-sm font-medium text-slate-800 dark:text-white">{ex.title}</p><p className="text-xs text-slate-400">{ex.category} · {fmt(ex.expenseDate)}</p></div>
+                <h3 className="mb-3 font-semibold text-slate-800 dark:text-white">Individual Expense Records</h3>
+                {!reportData.expenses?.length ? <p className="py-6 text-center text-slate-400">No expenses found</p> : (
+                  <div className="max-h-96 overflow-y-auto space-y-2">
+                    {reportData.expenses.map(ex => (
+                      <div key={ex._id} className="flex flex-wrap items-center justify-between rounded-lg bg-slate-50 px-4 py-3 dark:bg-slate-700/50 gap-2">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-800 dark:text-white">{ex.title}</p>
+                          <p className="text-xs text-slate-400">{ex.category} · {fmt(ex.expenseDate)} · Method: <b className="text-slate-600 dark:text-slate-300">{ex.paymentMethod || 'Cash'}</b> {ex.description ? `· Note: ${ex.description}` : ''}</p>
+                        </div>
                         <p className="font-bold text-red-600">{money(ex.amount)}</p>
                       </div>
                     ))}
@@ -271,7 +280,7 @@ const AdminExpensesPage = () => {
             </div>
           )}
 
-          {!reportData && (
+          {!reportData && !reportLoading && (
             <div className="rounded-2xl bg-white p-12 text-center shadow-sm dark:bg-slate-800"><FiCalendar className="mx-auto mb-3 text-5xl text-slate-300" /><p className="text-slate-400">Select a period and click "View Report"</p></div>
           )}
         </div>

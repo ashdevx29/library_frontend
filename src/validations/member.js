@@ -28,7 +28,12 @@ export const memberEditSchema = z.object({
   aadhaarNumber: z.string().optional(),
   shiftId: z.string().min(1, 'Shift is required'),
   seatId: z.string().min(1, 'Seat is required'),
-});
+  password: z.string().min(6, 'Password must be at least 6 characters').optional().or(z.literal('')),
+  confirmPassword: z.string().optional().or(z.literal('')),
+}).refine(data => {
+  if (data.password && data.password !== data.confirmPassword) return false;
+  return true;
+}, { message: 'Passwords do not match', path: ['confirmPassword'] });
 
 export const renewSchema = z.object({
   membershipPlan: z.enum(['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly'], { required_error: 'Plan is required' }),

@@ -13,7 +13,7 @@ const logoUrl = (path) => {
 };
 
 const navItems = [
-  [FiHome, 'Dashboard', '/student'],
+  [FiHome, 'Dashboard', '/student/dashboard'],
   [FiClock, 'Attendance', '/student/attendance'],
   [FiDollarSign, 'My Fees', '/student/fees'],
   [FiBarChart2, 'Reports', '/student/reports'],
@@ -79,7 +79,7 @@ const UserLayout = () => {
             <NavLink
               key={label}
               to={path}
-              end={path === '/student'}
+              end={path === '/student/dashboard'}
               onClick={() => window.innerWidth < 1024 && setOpen(false)}
               className={({ isActive }) =>
                 `mb-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm transition ${

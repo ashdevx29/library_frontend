@@ -69,8 +69,22 @@ export const getShifts = async () => {
 };
 
 // Membership (renewal)
-export const requestRenewal = async (planType, amount, paymentMethod) => {
-  const { data } = await api.post('/membership/renewal/request', { planType, amount, paymentMethod });
+export const requestRenewal = async (planType, amount, paymentMethod, screenshotFile = null, billingPeriod = '', fromMonth = '', toMonth = '') => {
+  if (screenshotFile) {
+    const formData = new FormData();
+    formData.append('planType', planType);
+    formData.append('amount', amount);
+    formData.append('paymentMethod', paymentMethod);
+    if (billingPeriod) formData.append('billingPeriod', billingPeriod);
+    if (fromMonth) formData.append('fromMonth', fromMonth);
+    if (toMonth) formData.append('toMonth', toMonth);
+    formData.append('screenshot', screenshotFile);
+    const { data } = await api.post('/membership/renewal/request', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data.data;
+  }
+  const { data } = await api.post('/membership/renewal/request', { planType, amount, paymentMethod, billingPeriod, fromMonth, toMonth });
   return data.data;
 };
 

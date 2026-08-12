@@ -107,7 +107,8 @@ function App() {
               <UserLayout />
             </ProtectedRoute>
           }>
-            <Route index element={<UserDashboard />} />
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<UserDashboard />} />
             <Route path="attendance" element={<UserAttendancePage />} />
             <Route path="fees" element={<UserFeesPage />} />
             <Route path="reports" element={<UserReportsPage />} />
