@@ -14,7 +14,7 @@ const STATUS_BADGE = {
   Inactive: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
 };
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+import { SOCKET_URL } from '../../utils/config';
 const PER_PAGE = 10;
 
 const SeatList = () => {

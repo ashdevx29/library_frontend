@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { FiArrowLeft, FiDownload, FiPrinter, FiRotateCcw, FiFileText, FiImage, FiCheckCircle, FiShield } from 'react-icons/fi';
 import { QRCodeCanvas } from 'qrcode.react';
 import { getPhotoUrl } from '../../utils/image';
+import UserAvatar from '../../components/ui/UserAvatar';
 import { toPng } from 'html-to-image';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../utils/api';

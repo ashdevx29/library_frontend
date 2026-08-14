@@ -30,7 +30,7 @@ const STATUS_TEXT = {
   Inactive: 'text-gray-500 dark:text-gray-400',
 };
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+import { SOCKET_URL } from '../../utils/config';
 
 const SeatGrid = () => {
   const [seats, setSeats] = useState([]);

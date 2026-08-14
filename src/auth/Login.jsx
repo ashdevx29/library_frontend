@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import axios from 'axios';
 import useAuthStore from '../store/authStore';
+import { API_URL } from '../utils/config';
 
 const Login = () => {
   const { register, handleSubmit, formState: { errors } } = useForm();
@@ -17,9 +18,7 @@ const Login = () => {
     setLoading(true);
     setErrorMsg('');
     try {
-      // Assuming a local server for dev; in production this would be an env var
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      const res = await axios.post(`${apiUrl}/auth/login`, {
+      const res = await axios.post(`${API_URL}/auth/login`, {
         email: data.identifier,
         password: data.password
       });

@@ -4,6 +4,7 @@ import { FiHome, FiClock, FiDollarSign, FiUser, FiLogOut, FiMenu, FiMoon, FiSun,
 import useAuthStore from '../store/authStore';
 import useThemeStore, { API_BASE } from '../store/themeStore';
 import { getPhotoUrl } from '../utils/image';
+import UserAvatar from '../components/ui/UserAvatar';
 
 const logoUrl = (path) => {
   if (!path) return '';

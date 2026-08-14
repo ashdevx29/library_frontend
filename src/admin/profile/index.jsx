@@ -3,6 +3,7 @@ import { getProfile, updateProfile, changePassword, uploadProfileImage } from '.
 import useAuthStore from '../../store/authStore';
 import { FiUser, FiMail, FiPhone, FiLock, FiCheck, FiCamera, FiEye, FiEyeOff } from 'react-icons/fi';
 import { getPhotoUrl } from '../../utils/image';
+import UserAvatar from '../../components/ui/UserAvatar';
 
 const AdminProfilePage = () => {
   const { user: storeUser, login } = useAuthStore();

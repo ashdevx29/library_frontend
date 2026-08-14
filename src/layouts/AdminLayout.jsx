@@ -8,6 +8,7 @@ import {
 import useAuthStore from '../store/authStore';
 import useThemeStore, { API_BASE } from '../store/themeStore';
 import { getPhotoUrl } from '../utils/image';
+import UserAvatar from '../components/ui/UserAvatar';
 
 const navItems = [
   [FiHome, 'Dashboard', '/admin/dashboard'],

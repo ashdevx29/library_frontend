@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FiEdit2, FiArrowLeft, FiClock, FiUser, FiGrid, FiMapPin, FiCalendar, FiRepeat, FiX } from 'react-icons/fi';
 import { getSeat, getSeatHistory, getSeatUsage } from '../../services/seatService';
 import { getPhotoUrl } from '../../utils/image';
+import UserAvatar from '../../components/ui/UserAvatar';
 import AssignModal from './AssignModal';
 import TransferModal from './TransferModal';
 

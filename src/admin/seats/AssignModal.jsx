@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiX, FiSearch } from 'react-icons/fi';
 import { assignSeat, getMembers, getShifts } from '../../services/seatService';
 import { getPhotoUrl } from '../../utils/image';
+import UserAvatar from '../../components/ui/UserAvatar';
 
 const AssignModal = ({ seatId, onClose, onDone }) => {
   const [members, setMembers] = useState([]);

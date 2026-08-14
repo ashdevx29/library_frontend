@@ -2,6 +2,7 @@ import React from 'react';
 import { formatDate } from '../../utils/helpers';
 
 import { getPhotoUrl } from '../../utils/image';
+import UserAvatar from '../ui/UserAvatar';
 
 const box = 'rounded-2xl border border-white/70 bg-white/80 p-5 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-800/80';
 

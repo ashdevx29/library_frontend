@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { fetchTheme, saveTheme } from '../services/themeService';
-
-const API_BASE = import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:5000';
+import { API_BASE } from '../utils/config';
 
 const defaultTheme = {
   libraryName: 'Saahityik Library ERP',
