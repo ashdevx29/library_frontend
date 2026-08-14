@@ -67,7 +67,6 @@ const UserProfilePage = () => {
 
   if (loading) return <div className="py-16 text-center text-slate-400">Loading...</div>;
 
-  const photo = getPhotoUrl(profile?.profileImage, profile?.name || 'U');
   const daysLeft = member ? Math.max(Math.ceil((new Date(member.membershipExpiryDate) - new Date()) / 86400000), 0) : 0;
 
   return (
@@ -75,7 +74,7 @@ const UserProfilePage = () => {
       {/* Header */}
       <div className="flex items-center gap-5">
         <div className="relative group cursor-pointer" onClick={() => fileRef.current?.click()}>
-          <img src={photo} alt="" className="h-24 w-24 rounded-full object-cover" />
+          <UserAvatar src={profile?.profileImage} name={profile?.name || 'U'} className="h-24 w-24 rounded-full object-cover" />
           <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition group-hover:opacity-100">
             <FiCamera className="text-xl text-white" />
           </div>

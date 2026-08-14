@@ -144,7 +144,7 @@ export default function IdCardGenerator() {
                 {/* Right side - photo */}
                 <div className="ml-4 flex flex-col items-center">
                   <div className="overflow-hidden rounded-xl border-2" style={{ borderColor: ORANGE, width: '120px', height: '126px' }}>
-                    <img src={photoSrc} alt={cardData.fullName} className="h-full w-full object-cover" />
+                    <UserAvatar src={cardData.photo} name={cardData.fullName} className="h-full w-full object-cover" />
                   </div>
                   <div className="mt-1 text-[9px] font-semibold" style={{ color: GRAY }}>{cardData.membershipPlan}</div>
                 </div>

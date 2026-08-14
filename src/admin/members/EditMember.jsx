@@ -8,11 +8,15 @@ import { memberEditSchema } from '../../validations/member';
 import { useMember, useUpdateMember, useShifts, useSeats } from '../../hooks/useApi';
 import { PageHeader, FormField, inputClass, btnPrimary, btnSecondary, PageLoader } from '../../components/ui/index';
 
+import UserAvatar from '../../components/ui/UserAvatar';
+import toast from 'react-hot-toast';
+
 export default function EditMember() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState('');
 
   const { data: member, isLoading } = useMember(id);
   const { data: shifts = [] } = useShifts();
@@ -20,7 +24,7 @@ export default function EditMember() {
   const seats = seatsData?.seats || seatsData || [];
   const updateMut = useUpdateMember();
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm({
+  const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm({
     resolver: zodResolver(memberEditSchema),
     defaultValues: {
       password: '',
@@ -41,12 +45,32 @@ export default function EditMember() {
         password: '',
         confirmPassword: '',
       });
+      setPhotoPreview(member.photo || '');
     }
   }, [member, reset]);
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size must be less than 5MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result);
+        setValue('photo', reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const onSubmit = async (formData) => {
     try {
       const payload = { ...formData };
+      if (photoPreview && photoPreview !== member?.photo) {
+        payload.photo = photoPreview;
+      }
       if (!payload.password || payload.password.trim() === '') {
         delete payload.password;
         delete payload.confirmPassword;
@@ -65,6 +89,17 @@ export default function EditMember() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-6">
         <div>
           <h3 className="mb-3 text-sm font-bold text-[var(--text-primary)]">Personal Information</h3>
+
+          <div className="mb-4 flex items-center gap-4 border-b border-[var(--border)] pb-4">
+            <UserAvatar src={photoPreview} name={watch('fullName') || member?.fullName || 'Member'} className="h-16 w-16 rounded-full object-cover ring-2 ring-[var(--primary)]/20" />
+            <div>
+              <label className="cursor-pointer rounded-xl bg-[var(--primary)]/10 px-4 py-2 text-xs font-semibold text-[var(--primary)] hover:bg-[var(--primary)]/20 transition-all inline-block">
+                📷 Change Member Photo
+                <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+              </label>
+              <p className="mt-1 text-[10px] text-[var(--text-muted)]">PNG, JPG or WEBP (Max 5MB)</p>
+            </div>
+          </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <FormField label="Full Name" error={errors.fullName?.message} required>
               <input {...register('fullName')} className={inputClass} placeholder="Full Name" />

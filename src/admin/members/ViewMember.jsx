@@ -11,7 +11,7 @@ import { PageLoader } from '../../components/ui/LoadingSpinner';
 import Modal from '../../components/ui/Modal';
 import { formatDate, daysLeft, getInitials, formatCurrency } from '../../utils/helpers';
 import { PLAN_TYPES, PAYMENT_METHODS } from '../../constants';
-import { getPhotoUrl } from '../../utils/image';
+import UserAvatar from '../../components/ui/UserAvatar';
 import { approveRenewal, rejectRenewal } from '../../services/paymentService';
 import { exportToCSV, exportToPDF } from '../../utils/exportHelpers';
 import toast from 'react-hot-toast';
@@ -38,7 +38,6 @@ export default function ViewMember() {
   if (!member) return null;
 
   const d = daysLeft(member.membershipExpiryDate);
-  const photo = getPhotoUrl(member.photo, member.fullName);
   const selectedPlan = PLAN_TYPES.find(p => p.value === watch('membershipPlan'));
 
   return (
@@ -47,7 +46,7 @@ export default function ViewMember() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-2 hover:bg-[var(--bg-hover)]"><FiArrowLeft size={16} /></button>
-          <img src={photo} alt="" className="h-12 w-12 rounded-full object-cover ring-2 ring-[var(--primary)]/20" />
+          <UserAvatar src={member.photo} name={member.fullName} className="h-12 w-12 rounded-full object-cover ring-2 ring-[var(--primary)]/20" />
           <div>
             <h1 className="text-2xl font-bold text-[var(--text-primary)]">{member.fullName}</h1>
             <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">

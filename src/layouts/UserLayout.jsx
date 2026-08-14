@@ -126,9 +126,9 @@ const UserLayout = () => {
                 onClick={() => setProfileOpen(!profileOpen)}
                 className="flex items-center gap-2 rounded-xl p-1.5 hover:bg-orange-50 dark:hover:bg-slate-800"
               >
-                <img
-                  src={getPhotoUrl(user?.profileImage, user?.name || 'S')}
-                  alt=""
+                <UserAvatar
+                  src={user?.profileImage}
+                  name={user?.name || 'S'}
                   className="h-9 w-9 rounded-xl object-cover"
                 />
                 <span className="hidden text-left sm:block">

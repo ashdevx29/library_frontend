@@ -7,12 +7,14 @@ import { FiArrowLeft, FiSave, FiUser, FiEye, FiEyeOff } from 'react-icons/fi';
 import { memberSchema } from '../../validations/member';
 import { useCreateMember, useShifts, useSeats } from '../../hooks/useApi';
 import { PLAN_TYPES } from '../../constants';
-import { PageHeader, FormField, inputClass, btnPrimary, btnSecondary } from '../../components/ui/index';
+import UserAvatar from '../../components/ui/UserAvatar';
+import toast from 'react-hot-toast';
 
 export default function AddMember() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState('');
   const { data: shifts = [] } = useShifts();
   const { data: seatsData } = useSeats({ status: 'Available' });
   const seats = seatsData?.seats || seatsData || [];
@@ -28,6 +30,22 @@ export default function AddMember() {
       paymentStatus: 'Pending',
     }
   });
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size must be less than 5MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result);
+        setValue('photo', reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const selectedPlan = watch('membershipPlan');
   React.useEffect(() => {
@@ -52,6 +70,17 @@ export default function AddMember() {
         {/* Personal Info */}
         <div>
           <h3 className="mb-3 text-sm font-bold text-[var(--text-primary)]">Personal Information</h3>
+
+          <div className="mb-4 flex items-center gap-4 border-b border-[var(--border)] pb-4">
+            <UserAvatar src={photoPreview} name={watch('fullName') || 'Member'} className="h-16 w-16 rounded-full object-cover ring-2 ring-[var(--primary)]/20" />
+            <div>
+              <label className="cursor-pointer rounded-xl bg-[var(--primary)]/10 px-4 py-2 text-xs font-semibold text-[var(--primary)] hover:bg-[var(--primary)]/20 transition-all inline-block">
+                📷 Upload Member Photo
+                <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+              </label>
+              <p className="mt-1 text-[10px] text-[var(--text-muted)]">PNG, JPG or WEBP (Max 5MB)</p>
+            </div>
+          </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <FormField label="Full Name" error={errors.fullName?.message} required>
               <input {...register('fullName')} className={inputClass} placeholder="Enter full name" />

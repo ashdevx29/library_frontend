@@ -112,7 +112,7 @@ const ViewSeat = () => {
           {seat.currentOccupant ? (
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <img className="h-12 w-12 rounded-full bg-orange-100 object-cover" src={getPhotoUrl(seat.currentOccupant.photo, seat.currentOccupant.fullName)} alt="" />
+                <UserAvatar className="h-12 w-12 rounded-full bg-orange-100 object-cover" src={seat.currentOccupant.photo} name={seat.currentOccupant.fullName} />
                 <div>
                   <p className="font-semibold text-slate-800 dark:text-white">{seat.currentOccupant.fullName}</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">{seat.currentOccupant.mobile}</p>

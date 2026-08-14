@@ -3,7 +3,7 @@ import useThemeStore from '../../store/themeStore.js';
 import { adminReportService } from '../../services/adminReportService.js';
 import { getDailyReport, getMonthlyReport, getYearlyReport } from '../../services/expenseService.js';
 import ExportButton from '../../components/ui/ExportButton';
-import { getPhotoUrl } from '../../utils/image';
+import UserAvatar from '../../components/ui/UserAvatar';
 import { FiUsers, FiDollarSign, FiGrid, FiDownload, FiFilter, FiBarChart2, FiClock, FiCheckCircle, FiAlertTriangle, FiEye, FiX, FiCalendar, FiArrowLeft } from 'react-icons/fi';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -152,9 +152,9 @@ const MemberAttendancePageView = ({ memberId, initialMonth, initialYear, onBack 
             <FiArrowLeft size={14} /> Back to Reports
           </button>
           <div className="flex items-center gap-2.5 min-w-0">
-            <img
-              src={getPhotoUrl(data?.member?.photo, data?.member?.fullName || 'User')}
-              alt={data?.member?.fullName}
+            <UserAvatar
+              src={data?.member?.photo}
+              name={data?.member?.fullName || 'User'}
               className="h-10 w-10 shrink-0 rounded-full object-cover bg-orange-100 border border-orange-200 shadow-sm"
             />
             <div className="min-w-0">
@@ -337,11 +337,11 @@ export default function AdminReports() {
               key: 'fullName',
               render: r => (
                 <div className="flex items-center gap-2">
-                  <img
-                    className="h-8 w-8 rounded-full bg-orange-100 object-cover border border-orange-200"
-                    src={getPhotoUrl(r.memberId?.photo, r.memberId?.fullName || 'User')}
-                    alt={r.memberId?.fullName}
-                  />
+                    <UserAvatar
+                      src={r.memberId?.photo}
+                      name={r.memberId?.fullName || 'User'}
+                      className="h-8 w-8 rounded-full bg-orange-100 object-cover border border-orange-200"
+                    />
                   <div>
                     <span className="font-semibold text-[var(--text-primary)]">{r.memberId?.fullName || '-'}</span>
                     <p className="text-[10px] text-[var(--text-muted)]">{r.memberId?.mobile}</p>
@@ -395,10 +395,10 @@ export default function AdminReports() {
                 label: 'Name',
                 render: r => (
                   <div className="flex items-center gap-2.5">
-                    <img
+                    <UserAvatar
+                      src={r.photo}
+                      name={r.fullName}
                       className="h-8 w-8 rounded-full bg-orange-100 object-cover border border-orange-200"
-                      src={getPhotoUrl(r.photo, r.fullName)}
-                      alt={r.fullName}
                     />
                     <div>
                       <b className="text-[var(--text-primary)] font-semibold">{r.fullName}</b>
@@ -466,10 +466,10 @@ export default function AdminReports() {
                 label: 'Name',
                 render: r => (
                   <div className="flex items-center gap-2.5">
-                    <img
+                    <UserAvatar
+                      src={r.photo}
+                      name={r.fullName}
                       className="h-8 w-8 rounded-full bg-orange-100 object-cover border border-orange-200"
-                      src={getPhotoUrl(r.photo, r.fullName)}
-                      alt={r.fullName}
                     />
                     <div>
                       <b className="text-[var(--text-primary)] font-semibold">{r.fullName}</b>
@@ -543,12 +543,11 @@ export default function AdminReports() {
                 label: 'Name',
                 render: r => (
                   <div className="flex items-center gap-2.5">
-                    <img
-                      className="h-8 w-8 rounded-full bg-orange-100 object-cover border border-orange-200"
-                      src={getPhotoUrl(r?.memberId?.photo, r?.memberId?.fullName || 'User')}
-                      alt={r?.memberId?.fullName}
-                    />
-                    <div>
+                    <UserAvatar
+                      src={r.memberId?.photo}
+                      name={r.memberId?.fullName || 'User'}
+                      className="h-8 w-8 rounded-full object-cover border border-orange-200"
+                    />  <div>
                       <b className="text-[var(--text-primary)] font-semibold">{r?.memberId?.fullName || '—'}</b>
                       <p className="text-[10px] text-[var(--text-muted)]">{r?.memberId?.mobile || '—'}</p>
                     </div>
@@ -593,12 +592,11 @@ export default function AdminReports() {
                 label: 'Name',
                 render: r => (
                   <div className="flex items-center gap-2.5">
-                    <img
-                      className="h-8 w-8 rounded-full bg-orange-100 object-cover border border-orange-200"
-                      src={getPhotoUrl(r?.photo || r?.memberId?.photo, r?.fullName || r?.memberId?.fullName || 'User')}
-                      alt={r?.fullName || r?.memberId?.fullName}
-                    />
-                    <div>
+                    <UserAvatar
+                      src={r.memberId?.photo || r.photo}
+                      name={r?.memberId?.fullName || r.fullName || 'User'}
+                      className="h-8 w-8 rounded-full object-cover border border-orange-200"
+                    /><div>
                       <b className="text-[var(--text-primary)] font-semibold">{r?.fullName || r?.memberId?.fullName || '—'}</b>
                       <p className="text-[10px] text-[var(--text-muted)]">{r?.mobile || r?.memberId?.mobile || '—'}</p>
                     </div>
@@ -643,12 +641,11 @@ export default function AdminReports() {
                 label: 'Name',
                 render: r => (
                   <div className="flex items-center gap-2.5">
-                    <img
-                      className="h-8 w-8 rounded-full bg-orange-100 object-cover border border-orange-200"
-                      src={getPhotoUrl(r?.photo, r?.fullName || 'User')}
-                      alt={r?.fullName}
-                    />
-                    <div>
+                    <UserAvatar
+                      src={r?.photo}
+                      name={r?.fullName || 'User'}
+                      className="h-8 w-8 rounded-full object-cover border border-orange-200"
+                    /><div>
                       <b className="text-[var(--text-primary)] font-semibold">{r?.fullName || '—'}</b>
                       <p className="text-[10px] text-[var(--text-muted)]">{r?.mobile || '—'}</p>
                     </div>
@@ -698,10 +695,10 @@ export default function AdminReports() {
                 label: 'Name',
                 render: r => (
                   <div className="flex items-center gap-2.5">
-                    <img
+                    <UserAvatar
+                      src={r?.photo || r?.memberId?.photo}
+                      name={r?.fullName || r?.memberId?.fullName || 'User'}
                       className="h-8 w-8 rounded-full bg-orange-100 object-cover border border-orange-200"
-                      src={getPhotoUrl(r?.photo || r?.memberId?.photo, r?.fullName || r?.memberId?.fullName || 'User')}
-                      alt={r?.fullName || r?.memberId?.fullName}
                     />
                     <div>
                       <b className="text-[var(--text-primary)] font-semibold">{r?.fullName || r?.memberId?.fullName || '—'}</b>
@@ -864,10 +861,10 @@ export default function AdminReports() {
               label: 'Name',
               render: r => (
                 <div className="flex items-center gap-2.5">
-                  <img
+                  <UserAvatar
+                    src={r.photo}
+                    name={r.fullName}
                     className="h-8 w-8 rounded-full bg-orange-100 object-cover border border-orange-200"
-                    src={getPhotoUrl(r.photo, r.fullName)}
-                    alt={r.fullName}
                   />
                   <div>
                     <b className="text-[var(--text-primary)] font-semibold">{r.fullName}</b>

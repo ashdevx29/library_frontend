@@ -1,8 +1,9 @@
 import { cn } from '../../utils/helpers';
 import { STATUS_COLORS } from '../../constants';
 import LoadingSpinner, { PageLoader } from './LoadingSpinner';
+import UserAvatar from './UserAvatar';
 
-export { LoadingSpinner, PageLoader };
+export { LoadingSpinner, PageLoader, UserAvatar };
 
 export function StatusBadge({ status, className }) {
   return (

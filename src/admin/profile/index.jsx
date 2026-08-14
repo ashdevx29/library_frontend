@@ -72,14 +72,12 @@ const AdminProfilePage = () => {
 
   if (loading) return <div className="py-16 text-center text-slate-400">Loading...</div>;
 
-  const photo = getPhotoUrl(profile?.profileImage, profile?.name || 'A');
-
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <div className="relative group cursor-pointer" onClick={() => fileRef.current?.click()}>
-          <img src={photo} alt="" className="h-20 w-20 rounded-full object-cover" />
+          <UserAvatar src={profile?.profileImage} name={profile?.name || 'A'} className="h-20 w-20 rounded-full object-cover" />
           <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition group-hover:opacity-100">
             <FiCamera className="text-xl text-white" />
           </div>

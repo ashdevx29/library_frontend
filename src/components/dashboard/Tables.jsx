@@ -90,10 +90,10 @@ export function UpcomingExpiryTable({ data }) {
                 >
                   <td className="py-3">
                     <div className="flex items-center gap-2">
-                      <img
+                      <UserAvatar
                         className="h-9 w-9 rounded-full bg-orange-100 object-cover"
-                        src={getPhotoUrl(x.photo, x.fullName)}
-                        alt={x.fullName}
+                        src={x.photo}
+                        name={x.fullName}
                       />
                       <b className="text-slate-700 dark:text-slate-200">{x.fullName}</b>
                     </div>

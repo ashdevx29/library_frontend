@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiEye, FiEdit2, FiRefreshCw, FiMessageCircle, FiGrid, FiClock, FiChevronDown, FiChevronUp } from 'react-icons/fi';
-import { getPhotoUrl } from '../../utils/image';
+import UserAvatar from '../../components/ui/UserAvatar';
 
 const REMINDER_DAYS = [3, 5, 7];
 
@@ -20,12 +20,10 @@ const MemberCard = ({ member }) => {
     : isExpired ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
     : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400';
 
-  const photo = getPhotoUrl(member.photo, member.fullName);
-
   return (
     <article className="rounded-2xl border border-white/70 bg-white/80 p-5 shadow-sm backdrop-blur transition hover:shadow-md dark:border-slate-700 dark:bg-slate-800/80">
       <div className="flex items-start gap-4">
-        <img src={photo} alt={member.fullName} className="h-14 w-14 shrink-0 rounded-full object-cover" />
+        <UserAvatar src={member.photo} name={member.fullName} className="h-14 w-14 shrink-0 rounded-full object-cover" />
         <div className="min-w-0 flex-1">
           <h3 className="truncate font-semibold text-slate-800 dark:text-white">{member.fullName}</h3>
           <p className="text-sm text-slate-500 dark:text-slate-400">{member.mobile}</p>

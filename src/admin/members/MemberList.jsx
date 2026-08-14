@@ -14,7 +14,7 @@ import { PageHeader, StatCard, StatusBadge, inputClass } from '../../components/
 import { PageLoader } from '../../components/ui/LoadingSpinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { formatDate, calculateRemainingDays, getInitials } from '../../utils/helpers';
-import { getPhotoUrl } from '../../utils/image';
+import UserAvatar from '../../components/ui/UserAvatar';
 import { PLAN_TYPES } from '../../constants';
 
 const col = createColumnHelper();
@@ -105,9 +105,9 @@ export default function MemberList() {
       header: 'Member',
       cell: info => (
         <div className="flex items-center gap-2.5">
-          <img
-            src={getPhotoUrl(info.row.original.photo, info.getValue())}
-            alt={info.getValue()}
+          <UserAvatar
+            src={info.row.original.photo}
+            name={info.getValue()}
             className="h-9 w-9 rounded-full object-cover border border-orange-200"
           />
           <div>
@@ -312,9 +312,9 @@ export default function MemberList() {
                     {/* Header: Photo, Name, Mobile, Status */}
                     <div className="flex items-start justify-between gap-3 border-b border-[var(--border)] pb-3">
                       <div className="flex items-center gap-3">
-                        <img
-                          src={getPhotoUrl(m.photo, m.fullName)}
-                          alt={m.fullName}
+                        <UserAvatar
+                          src={m.photo}
+                          name={m.fullName}
                           className="h-12 w-12 rounded-full object-cover border-2 border-orange-200 dark:border-orange-900/50 shadow-xs"
                         />
                         <div>
