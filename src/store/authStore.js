@@ -12,10 +12,13 @@ const useAuthStore = create((set, get) => ({
 
   setLoading: (loading) => set({ loading }),
 
-  login: (userData, accessToken) => {
+  login: (userData, accessToken, refreshToken) => {
     const data = { ...userData, permissions: userData.permissions || [] };
     localStorage.setItem('userInfo', JSON.stringify(data));
     localStorage.setItem('accessToken', accessToken);
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+    }
     set({ user: data, token: accessToken, role: data.role, isAuthenticated: true });
     get().scheduleTokenRefresh();
   },
@@ -30,9 +33,12 @@ const useAuthStore = create((set, get) => ({
 
   refreshToken: async () => {
     try {
-      const { data } = await api.post('/auth/refresh-token');
+      const storedRefreshToken = localStorage.getItem('refreshToken');
+      const { data } = await api.post('/auth/refresh-token', { refreshToken: storedRefreshToken });
       const newToken = data.data.accessToken;
+      const newRefreshToken = data.data.refreshToken || storedRefreshToken;
       localStorage.setItem('accessToken', newToken);
+      if (newRefreshToken) localStorage.setItem('refreshToken', newRefreshToken);
       set({ token: newToken });
       return newToken;
     } catch {
@@ -51,9 +57,13 @@ const useAuthStore = create((set, get) => ({
   logout: () => {
     const state = get();
     if (state._refreshTimer) clearTimeout(state._refreshTimer);
-    try { api.post('/auth/logout'); } catch { /* best effort */ }
+    try {
+      const storedRefreshToken = localStorage.getItem('refreshToken');
+      api.post('/auth/logout', { refreshToken: storedRefreshToken });
+    } catch { /* best effort */ }
     localStorage.removeItem('userInfo');
     localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
     set({ user: null, token: null, role: null, isAuthenticated: false, _refreshTimer: null });
   },
 }));

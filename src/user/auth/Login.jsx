@@ -19,9 +19,9 @@ const UserLogin = () => {
     setErrorMsg('');
     try {
       const res = await userLogin(data.identifier, data.password);
-      if (res.success) {
-        login(res.data, res.data.accessToken);
-        navigate('/student/dashboard');
+      if (res.success && res.data) {
+        login(res.data, res.data.accessToken, res.data.refreshToken);
+        navigate('/student/dashboard', { replace: true });
       }
     } catch (err) {
       setErrorMsg(err.response?.data?.message || 'Login failed. Please try again.');

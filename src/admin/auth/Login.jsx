@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import AuthLayout from '../../auth/AuthLayout';
 import { adminLogin } from '../../services/authService';
+import useAuthStore from '../../store/authStore';
 
 const AdminLogin = () => {
   const { register, handleSubmit, formState: { errors } } = useForm();
@@ -11,15 +12,16 @@ const AdminLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const navigate = useNavigate();
+  const login = useAuthStore((state) => state.login);
 
   const onSubmit = async (data) => {
     setLoading(true);
     setErrorMsg('');
     try {
       const res = await adminLogin(data.identifier, data.password);
-      if (res.success) {
-        // Pass userId to the Verify OTP page state
-        navigate('/admin/verify-otp', { state: { userId: res.userId, identifier: data.identifier } });
+      if (res.success && res.data) {
+        login(res.data, res.data.accessToken, res.data.refreshToken);
+        navigate('/admin/dashboard', { replace: true });
       }
     } catch (err) {
       setErrorMsg(err.response?.data?.message || 'Login failed. Please try again.');
